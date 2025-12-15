@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>登录 / 注册 - 成绩管理教学平台</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="nav container nav">
+        <div class="brand">
+          <span class="tag">Campus</span>
+          <span class="tagline">成绩管理教学平台</span>
+        </div>
+        <div class="nav-links"></div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <div class="tab-row">
+          <div class="tab active" data-tab="login">登录</div>
+          <div class="tab" data-tab="register">注册</div>
+          <div class="tab" data-tab="reset">找回密码</div>
+        </div>
+
+        <div id="login" class="tab-panel">
+          <div class="grid grid-2">
+            <div>
+              <h2>账号登录</h2>
+              <p class="subtitle">支持学生 / 教师 / 教务 / 系统管理员账号。</p>
+              <form id="login-form" class="list">
+                <input name="username" placeholder="用户名" required />
+                <input name="password" type="password" placeholder="密码" required />
+                <button type="submit">登录</button>
+              </form>
+            </div>
+            <div class="highlight">
+              <h3>密码安全说明</h3>
+              <p class="muted">密码在浏览器端使用加盐 SHA-256 哈希存储，并提供 30 分钟有效的重置 token 流程。</p>
+              <p class="muted">演示账号：student1/stud123, teacher1/teach123, admin/admin123, sysadmin/sys123</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="register" class="tab-panel hidden">
+          <h2>新用户注册</h2>
+          <p class="subtitle">初始密码需包含字母与数字，长度不少于 6 位。</p>
+          <form id="register-form" class="grid grid-2">
+            <div class="list">
+              <input name="username" placeholder="用户名" required />
+              <input name="password" type="password" placeholder="密码" required />
+              <input name="name" placeholder="姓名" required />
+              <input name="email" placeholder="校内邮箱" required />
+            </div>
+            <div class="list">
+              <select name="role">
+                <option value="student">学生</option>
+                <option value="teacher">教师</option>
+              </select>
+              <input name="className" placeholder="班级 (学生必填)" />
+              <input name="major" placeholder="专业" />
+              <button type="submit">注册并登录</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="reset" class="tab-panel hidden">
+          <h2>忘记密码</h2>
+          <p class="subtitle">通过绑定邮箱生成临时 token，再设置新密码。</p>
+          <div class="grid grid-2">
+            <form id="reset-request" class="list">
+              <input name="email" placeholder="请输入绑定邮箱" required />
+              <button type="submit">发送重置 token</button>
+              <p class="muted">token 将模拟发送到邮箱，这里直接显示以便演示。</p>
+              <div id="token-display" class="highlight muted"></div>
+            </form>
+            <form id="reset-confirm" class="list">
+              <input name="token" placeholder="输入收到的 token" required />
+              <input name="newPassword" type="password" placeholder="新密码" required />
+              <button type="submit">确认重置</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="footer">若未登录将自动重定向，所有数据保存在浏览器。</div>
+
+    <script type="module" src="js/login.js"></script>
+  </body>
+</html>

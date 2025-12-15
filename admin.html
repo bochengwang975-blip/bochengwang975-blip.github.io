@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>教务端 - 成绩管理教学平台</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="nav container nav">
+        <div class="brand">
+          <span class="tag">Admin</span>
+          <span class="tagline">教务管理</span>
+        </div>
+        <div class="nav-links"></div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <div>
+          <div class="badge">基础数据与账号安全</div>
+          <h1>管理班级、学生、成绩发布</h1>
+          <p class="subtitle">支持 CSV 导入学生、重置密码、审核发布成绩。</p>
+        </div>
+        <div class="card">
+          <h3>教务提示</h3>
+          <p class="muted">CSV 格式示例：student_no,name,email,className,major,password</p>
+        </div>
+      </section>
+
+      <section class="grid grid-2">
+        <div class="card">
+          <h3>班级管理</h3>
+          <form id="class-form" class="list">
+            <input name="name" placeholder="班级名称" required />
+            <input name="size" type="number" placeholder="人数" />
+            <input name="counselor" placeholder="辅导员" />
+            <button type="submit">添加班级</button>
+          </form>
+          <div id="class-list" class="list"></div>
+        </div>
+
+        <div class="card">
+          <h3>批量导入学生（CSV）</h3>
+          <textarea id="csv-input" rows="8" placeholder="student_no,name,email,className,major,password"></textarea>
+          <button id="import-btn">导入</button>
+          <div id="import-result" class="muted"></div>
+        </div>
+      </section>
+
+      <section class="grid grid-2">
+        <div class="card">
+          <h3>账号安全</h3>
+          <form id="reset-form" class="list">
+            <input name="username" placeholder="用户名" required />
+            <input name="newPassword" placeholder="新密码" required />
+            <button type="submit">强制重置密码</button>
+          </form>
+          <p class="muted">重置后密码将使用新盐重新哈希。</p>
+        </div>
+
+        <div class="card">
+          <h3>成绩审核发布</h3>
+          <p class="subtitle">查看待发布的成绩，批量一键发布。</p>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>课程</th>
+                  <th>学生</th>
+                  <th>成绩</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="review-rows"></tbody>
+            </table>
+          </div>
+          <button id="publish-all">发布所有待审核成绩</button>
+        </div>
+      </section>
+    </main>
+
+    <div class="footer">教务端可查看全部成绩并进行审核。</div>
+
+    <script type="module" src="js/admin.js"></script>
+  </body>
+</html>

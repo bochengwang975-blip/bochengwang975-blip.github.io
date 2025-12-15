@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>系统管理 - 成绩管理教学平台</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="nav container nav">
+        <div class="brand">
+          <span class="tag">System</span>
+          <span class="tagline">系统管理</span>
+        </div>
+        <div class="nav-links"></div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <div>
+          <div class="badge">日志与备份</div>
+          <h1>系统运维监控</h1>
+          <p class="subtitle">查看操作日志、检测异常成绩、导出/导入数据备份。</p>
+        </div>
+        <div class="card">
+          <h3>安全说明</h3>
+          <p class="muted">本系统所有数据仅存于浏览器 localStorage，可随时导出 JSON 备份或一键恢复。</p>
+        </div>
+      </section>
+
+      <section class="grid grid-2">
+        <div class="card">
+          <h3>操作日志</h3>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>用户</th>
+                  <th>动作</th>
+                  <th>详情</th>
+                </tr>
+              </thead>
+              <tbody id="log-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>备份与恢复</h3>
+          <div class="flex">
+            <button id="backup-btn">导出备份</button>
+            <input type="file" id="import-file" />
+          </div>
+          <p class="muted">可选择 JSON 文件恢复，或直接粘贴 JSON 数据。</p>
+          <textarea id="restore-text" rows="6" placeholder="粘贴 JSON 数据"></textarea>
+          <button id="restore-btn" class="secondary">立即恢复</button>
+        </div>
+      </section>
+
+      <section class="grid grid-2">
+        <div class="card">
+          <h3>成绩异常监控</h3>
+          <p class="subtitle">检测课程成绩分布，标记及格率低或突变课程。</p>
+          <div id="anomaly-list" class="list"></div>
+        </div>
+        <div class="card">
+          <h3>系统操作</h3>
+          <div class="list">
+            <div class="list-item">支持清空 session 重新登录。</div>
+            <button id="clear-session">清除登录状态</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="footer">系统端可查看所有角色操作记录。</div>
+
+    <script type="module" src="js/system.js"></script>
+  </body>
+</html>

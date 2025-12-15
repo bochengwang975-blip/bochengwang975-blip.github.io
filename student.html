@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>学生端 - 成绩管理教学平台</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="nav container nav">
+        <div class="brand">
+          <span class="tag">Student</span>
+          <span class="tagline">学生端</span>
+        </div>
+        <div class="nav-links"></div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <div>
+          <div class="badge">我的课表与成绩</div>
+          <h1>查看课程、提交作业、导出成绩</h1>
+          <p class="subtitle">登录后可查看已选课程、任务进度、成绩发布情况，并支持 CSV 导出。</p>
+        </div>
+        <div class="card">
+          <h3>个人信息</h3>
+          <p id="student-info" class="muted"></p>
+        </div>
+      </section>
+
+      <section class="grid grid-2">
+        <div class="card">
+          <div class="flex-between">
+            <div>
+              <h2>我的课程</h2>
+              <p class="subtitle">点击查看任务与资料，支持退选。</p>
+            </div>
+            <button id="export-grade" class="secondary">导出成绩 CSV</button>
+          </div>
+          <div id="my-courses" class="list"></div>
+        </div>
+
+        <div class="card">
+          <div class="flex-between">
+            <div>
+              <h2>选修新课程</h2>
+              <p class="subtitle">浏览可选课程，搜索并加入。</p>
+            </div>
+            <input id="student-search" placeholder="搜索课程..." />
+          </div>
+          <div id="available-courses" class="list"></div>
+        </div>
+      </section>
+
+      <section class="grid grid-2">
+        <div class="card" id="course-detail">
+          <h3>课程详情</h3>
+          <p class="subtitle">选择左侧课程查看任务、资料与成绩明细。</p>
+          <div id="detail-body"></div>
+        </div>
+        <div class="card">
+          <h3>成绩总览</h3>
+          <p class="subtitle">按课程展示成绩，包含发布状态。</p>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>课程</th>
+                  <th>成绩</th>
+                  <th>状态</th>
+                  <th>备注</th>
+                </tr>
+              </thead>
+              <tbody id="grade-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="footer">数据保存在浏览器，可随时刷新查看。</div>
+
+    <script type="module" src="js/student.js"></script>
+  </body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>成绩管理教学平台</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="nav container nav">
+        <div class="brand">
+          <span class="tag">Campus</span>
+          <span class="tagline">成绩管理教学平台</span>
+        </div>
+        <div class="nav-links"></div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <div>
+          <div class="badge">游客 / 学生 课程浏览</div>
+          <h1>课程展示与选修入口</h1>
+          <p class="subtitle">
+            提供课程搜索、简介、授课教师与开课院系信息。登录后可继续选课、查看任务与成绩。
+          </p>
+          <div class="flex">
+            <a class="btn" href="login.html">登录 / 注册</a>
+            <a class="btn secondary" href="#course-list">浏览课程</a>
+          </div>
+        </div>
+        <div class="card">
+          <h3>快速账号</h3>
+          <p class="muted">首次使用可直接登录这些演示账号：</p>
+          <ul class="list">
+            <li class="list-item">学生：student1 / stud123</li>
+            <li class="list-item">教师：teacher1 / teach123</li>
+            <li class="list-item">教务：admin / admin123</li>
+            <li class="list-item">系统：sysadmin / sys123</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card" id="course-list">
+        <div class="flex-between">
+          <div>
+            <h2>公开课程列表</h2>
+            <p class="subtitle">支持课程名 / 代码 / 院系搜索，游客可浏览详情，学生登录后可直接选课。</p>
+          </div>
+          <div style="width: 240px;">
+            <input id="search" placeholder="搜索课程..." />
+          </div>
+        </div>
+        <div class="grid grid-2" id="course-cards"></div>
+      </section>
+
+      <section class="grid grid-2">
+        <div class="card">
+          <h3>特色模块</h3>
+          <div class="list">
+            <div class="list-item">成绩录入与发布（教师端）</div>
+            <div class="list-item">学生个人成绩导出 CSV</div>
+            <div class="list-item">教务端批量导入学生表</div>
+            <div class="list-item">系统管理员日志与备份</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>安全与账号</h3>
+          <p class="subtitle">加盐哈希存储密码，提供邮箱找回流程。</p>
+          <div class="list">
+            <div class="list-item">密码强度校验 + 初次登录强制修改</div>
+            <div class="list-item">重置密码 Token 30 分钟有效</div>
+            <div class="list-item">操作日志审计 200 条滚动</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="footer">纯前端实现，所有数据存储在浏览器 localStorage。</div>
+
+    <script type="module" src="js/index.js"></script>
+  </body>
+</html>
