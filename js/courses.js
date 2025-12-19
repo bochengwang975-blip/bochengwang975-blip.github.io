@@ -112,9 +112,9 @@ export const publishFinalGrade = async (courseId, studentId, grade, actorId) => 
   const enrollment = data.enrollments.find(e => e.courseId === courseId && e.studentId === studentId);
   if (!enrollment) throw new Error("未找到选课记录");
   enrollment.finalGrade = Number(grade);
-  enrollment.published = true;
+  enrollment.published = false; // 教师录入成绩后，需要管理员审核才能发布
   saveData(data);
-  addLog(actorId, "发布成绩", `课程 ${courseId} 学生 ${studentId} 成绩 ${grade}`);
+  addLog(actorId, "录入成绩", `课程 ${courseId} 学生 ${studentId} 成绩 ${grade}（待审核）`);
 };
 
 export const dropEnrollment = async (courseId, studentId) => {

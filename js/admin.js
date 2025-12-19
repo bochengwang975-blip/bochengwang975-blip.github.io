@@ -36,6 +36,8 @@ tabs.forEach(tab => {
       renderRelationClassSelect();
       renderRelationCourseSelect();
       renderRelationCourseStudentsSelect();
+    } else if (targetTab === "grades") {
+      renderGradeCourses();
     }
   });
 });
@@ -672,6 +674,7 @@ const editCourse = (id) => {
     document.getElementById("course-time-period").value = "";
   }
   document.getElementById("course-location").value = course.location || "";
+  document.getElementById("course-historical-average").value = course.historicalAverage !== undefined && course.historicalAverage !== null ? course.historicalAverage : "";
   
   document.getElementById("course-summary").value = course.summary || "";
   
@@ -764,6 +767,7 @@ courseForm?.addEventListener("submit", e => {
   const timeDay = form.get("time-day");
   const timePeriod = form.get("time-period");
   const location = form.get("location").trim();
+  const historicalAverage = form.get("historicalAverage") ? Number(form.get("historicalAverage")) : null;
   const summary = form.get("summary").trim();
   
   // 获取选中的教师
@@ -822,6 +826,7 @@ courseForm?.addEventListener("submit", e => {
       course.location = location;
       course.summary = summary;
       course.teacherIds = selectedTeachers;
+      course.historicalAverage = historicalAverage;
       // 兼容旧数据：删除旧的schedule字段
       if (course.schedule) delete course.schedule;
       if (course.teacherId) delete course.teacherId;
@@ -845,6 +850,7 @@ courseForm?.addEventListener("submit", e => {
       location,
       summary,
       teacherIds: selectedTeachers,
+      historicalAverage,
       tags: [],
       materials: [],
       tasks: []
@@ -861,6 +867,7 @@ courseForm?.addEventListener("submit", e => {
 const resetCourseForm = () => {
   courseForm.reset();
   document.getElementById("course-id").value = "";
+  document.getElementById("course-historical-average").value = "";
   courseTeachersDiv.querySelectorAll("input[type='checkbox']").forEach(cb => cb.checked = false);
   document.getElementById("schedule-conflict-warning").style.display = "none";
   courseSubmitBtn.textContent = "添加课程";
@@ -1262,6 +1269,365 @@ relationCourseStudentsSelect?.addEventListener("change", e => {
   });
 });
 
+// ==================== 成绩审核 ====================
+const gradeCourseList = document.getElementById("grade-course-list");
+const gradeCourseSearch = document.getElementById("grade-course-search");
+const gradeDetailPanel = document.getElementById("grade-detail-panel");
+const gradeDetailTitle = document.getElementById("grade-detail-title");
+const gradeStatistics = document.getElementById("grade-statistics");
+const gradeDetailTable = document.getElementById("grade-detail-table");
+const gradeApproveAllBtn = document.getElementById("grade-approve-all-btn");
+const gradeCloseDetailBtn = document.getElementById("grade-close-detail-btn");
+const setHistoricalAverageInput = document.getElementById("set-historical-average");
+const saveHistoricalAverageBtn = document.getElementById("save-historical-average-btn");
+let currentGradeCourseId = null;
+
+// 计算课程成绩统计
+const calculateCourseStatistics = (courseId) => {
+  const data = getData();
+  const enrollments = (data.enrollments || []).filter(e => e.courseId === courseId);
+  const gradesWithScore = enrollments.filter(e => e.finalGrade !== null && e.finalGrade !== undefined);
+  
+  if (gradesWithScore.length === 0) {
+    return {
+      total: enrollments.length,
+      graded: 0,
+      excellentRate: 0,
+      passRate: 0,
+      averageScore: 0,
+      publishedCount: 0,
+      unpublishedCount: 0
+    };
+  }
+  
+  const excellentCount = gradesWithScore.filter(e => e.finalGrade > 90).length;
+  const passCount = gradesWithScore.filter(e => e.finalGrade >= 60).length;
+  const totalScore = gradesWithScore.reduce((sum, e) => sum + e.finalGrade, 0);
+  const averageScore = totalScore / gradesWithScore.length;
+  const excellentRate = (excellentCount / gradesWithScore.length) * 100;
+  const passRate = (passCount / gradesWithScore.length) * 100;
+  const publishedCount = enrollments.filter(e => e.published).length;
+  const unpublishedCount = enrollments.filter(e => !e.published && e.finalGrade !== null && e.finalGrade !== undefined).length;
+  
+  return {
+    total: enrollments.length,
+    graded: gradesWithScore.length,
+    excellentRate,
+    passRate,
+    averageScore,
+    publishedCount,
+    unpublishedCount
+  };
+};
+
+// 检查课程是否异常
+const checkCourseAnomaly = (courseId, stats) => {
+  const data = getData();
+  const course = data.courses.find(c => c.id === courseId);
+  const anomalies = [];
+  
+  // 课程维度：优秀率>40%或及格率<60%
+  if (stats.excellentRate > 40) {
+    anomalies.push({ type: "excellent", message: `优秀率过高：${stats.excellentRate.toFixed(1)}%` });
+  }
+  if (stats.passRate < 60 && stats.graded > 0) {
+    anomalies.push({ type: "pass", message: `及格率过低：${stats.passRate.toFixed(1)}%` });
+  }
+  
+  // 学生维度：平均分异常（与往年平均分比较）
+  if (course && course.historicalAverage !== undefined && course.historicalAverage !== null) {
+    const diff = stats.averageScore - course.historicalAverage;
+    const diffPercent = (diff / course.historicalAverage) * 100;
+    if (Math.abs(diffPercent) > 20) { // 差异超过20%
+      anomalies.push({ 
+        type: "average", 
+        message: `平均分异常：当前${stats.averageScore.toFixed(1)}分，往年${course.historicalAverage}分，差异${diffPercent > 0 ? '+' : ''}${diffPercent.toFixed(1)}%` 
+      });
+    }
+  }
+  
+  return anomalies;
+};
+
+// 渲染课程成绩列表
+const renderGradeCourses = (searchTerm = "") => {
+  const data = getData();
+  const courses = data.courses || [];
+  let filtered = courses;
+  
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase();
+    filtered = courses.filter(c => 
+      c.name.toLowerCase().includes(term) || 
+      c.code.toLowerCase().includes(term)
+    );
+  }
+  
+  gradeCourseList.innerHTML = "";
+  if (filtered.length === 0) {
+    gradeCourseList.innerHTML = "<div class='muted'>暂无课程数据</div>";
+    return;
+  }
+  
+  filtered.forEach(course => {
+    const stats = calculateCourseStatistics(course.id);
+    const anomalies = checkCourseAnomaly(course.id, stats);
+    const hasAnomaly = anomalies.length > 0;
+    
+    const item = document.createElement("div");
+    item.className = "list-item";
+    if (hasAnomaly) {
+      item.style.borderLeft = "4px solid #e74c3c";
+      item.style.background = "#fff5f5";
+    }
+    
+    let anomalyBadges = "";
+    if (hasAnomaly) {
+      anomalyBadges = anomalies.map(a => 
+        `<span style="display: inline-block; margin-left: 0.5rem; padding: 0.2rem 0.5rem; background: #e74c3c; color: white; border-radius: 3px; font-size: 0.85em;">⚠️ ${a.message}</span>`
+      ).join("");
+    }
+    
+    const publishedStatus = stats.publishedCount > 0 
+      ? `<span style="color: #27ae60;">已发布：${stats.publishedCount}人</span>` 
+      : "";
+    const unpublishedStatus = stats.unpublishedCount > 0 
+      ? `<span style="color: #e67e22;">待审核：${stats.unpublishedCount}人</span>` 
+      : "";
+    
+    item.innerHTML = `
+      <div class="flex-between">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <strong>${course.name}</strong> <span class="muted">(${course.code})</span>
+            ${hasAnomaly ? '<span style="color: #e74c3c; font-size: 1.2em;">⚠️</span>' : ''}
+          </div>
+          ${anomalyBadges}
+          <p class="muted" style="margin-top: 0.5rem;">
+            选课人数：${stats.total} | 已录入成绩：${stats.graded} | 
+            优秀率（>90分）：${stats.excellentRate.toFixed(1)}% | 
+            及格率（≥60分）：${stats.passRate.toFixed(1)}% | 
+            平均分：${stats.averageScore.toFixed(1)}分
+            ${course.historicalAverage !== undefined && course.historicalAverage !== null 
+              ? ` | 往年平均分：${course.historicalAverage}分` 
+              : ''}
+          </p>
+          <p class="muted">
+            ${publishedStatus} ${unpublishedStatus ? ' | ' + unpublishedStatus : ''}
+          </p>
+        </div>
+        <div>
+          <button class="mini" data-view-grade="${course.id}">查看详情</button>
+        </div>
+      </div>
+    `;
+    gradeCourseList.appendChild(item);
+  });
+  
+  bindGradeCourseActions();
+};
+
+// 绑定课程操作
+const bindGradeCourseActions = () => {
+  gradeCourseList.querySelectorAll("[data-view-grade]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const courseId = btn.dataset.viewGrade;
+      renderGradeDetail(courseId);
+    });
+  });
+};
+
+// 渲染课程成绩详情
+const renderGradeDetail = (courseId) => {
+  currentGradeCourseId = courseId;
+  const data = getData();
+  const course = data.courses.find(c => c.id === courseId);
+  if (!course) return;
+  
+  // 设置往年平均分输入框的值
+  if (setHistoricalAverageInput) {
+    setHistoricalAverageInput.value = course.historicalAverage !== undefined && course.historicalAverage !== null 
+      ? course.historicalAverage 
+      : "";
+  }
+  
+  const enrollments = (data.enrollments || []).filter(e => e.courseId === courseId);
+  const stats = calculateCourseStatistics(courseId);
+  const anomalies = checkCourseAnomaly(courseId, stats);
+  
+  // 设置标题
+  gradeDetailTitle.textContent = `${course.name} (${course.code}) - 成绩详情`;
+  
+  // 显示统计信息
+  let statsHtml = `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div><strong>选课人数：</strong>${stats.total}</div>
+      <div><strong>已录入成绩：</strong>${stats.graded}</div>
+      <div><strong>优秀率（>90分）：</strong>${stats.excellentRate.toFixed(1)}%</div>
+      <div><strong>及格率（≥60分）：</strong>${stats.passRate.toFixed(1)}%</div>
+      <div><strong>平均分：</strong>${stats.averageScore.toFixed(1)}分</div>
+      ${course.historicalAverage !== undefined && course.historicalAverage !== null 
+        ? `<div><strong>往年平均分：</strong>${course.historicalAverage}分</div>` 
+        : ''}
+      <div><strong>已发布：</strong>${stats.publishedCount}人</div>
+      <div><strong>待审核：</strong>${stats.unpublishedCount}人</div>
+    </div>
+  `;
+  
+  if (anomalies.length > 0) {
+    statsHtml += `
+      <div style="margin-top: 1rem; padding: 0.75rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">
+        <strong style="color: #856404;">⚠️ 异常提醒：</strong>
+        <ul style="margin: 0.5rem 0 0 1.5rem; color: #856404;">
+          ${anomalies.map(a => `<li>${a.message}</li>`).join("")}
+        </ul>
+      </div>
+    `;
+  }
+  
+  gradeStatistics.innerHTML = statsHtml;
+  
+  // 显示学生成绩列表
+  gradeDetailTable.innerHTML = "";
+  if (enrollments.length === 0) {
+    gradeDetailTable.innerHTML = "<tr><td colspan='6' style='text-align: center; padding: 1rem;' class='muted'>暂无选课学生</td></tr>";
+  } else {
+    enrollments.forEach(enrollment => {
+      const student = data.users.find(u => u.id === enrollment.studentId);
+      if (!student) return;
+      
+      const tr = document.createElement("tr");
+      const grade = enrollment.finalGrade !== null && enrollment.finalGrade !== undefined ? enrollment.finalGrade : "-";
+      const status = enrollment.published ? "已发布" : (enrollment.finalGrade !== null && enrollment.finalGrade !== undefined ? "待审核" : "未录入");
+      const statusColor = enrollment.published ? "#27ae60" : (enrollment.finalGrade !== null && enrollment.finalGrade !== undefined ? "#e67e22" : "#95a5a6");
+      
+      tr.innerHTML = `
+        <td style="border: 1px solid #ddd; padding: 0.5rem;">${student.username}</td>
+        <td style="border: 1px solid #ddd; padding: 0.5rem;">${student.name}</td>
+        <td style="border: 1px solid #ddd; padding: 0.5rem;">${student.className || "未分配"}</td>
+        <td style="border: 1px solid #ddd; padding: 0.5rem;">${grade}</td>
+        <td style="border: 1px solid #ddd; padding: 0.5rem; color: ${statusColor};">${status}</td>
+        <td style="border: 1px solid #ddd; padding: 0.5rem;">
+          ${!enrollment.published && enrollment.finalGrade !== null && enrollment.finalGrade !== undefined
+            ? `<button class="mini" data-approve-grade="${enrollment.id}">审核通过</button>`
+            : enrollment.published
+            ? `<span class="muted">已发布</span>`
+            : `<span class="muted">未录入</span>`}
+        </td>
+      `;
+      gradeDetailTable.appendChild(tr);
+    });
+    
+    // 绑定审核按钮
+    gradeDetailTable.querySelectorAll("[data-approve-grade]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const enrollmentId = btn.dataset.approveGrade;
+        approveGrade(enrollmentId);
+      });
+    });
+  }
+  
+  gradeDetailPanel.style.display = "block";
+  gradeDetailPanel.scrollIntoView({ behavior: "smooth" });
+};
+
+// 审核通过单个成绩
+const approveGrade = (enrollmentId) => {
+  const data = getData();
+  const enrollment = data.enrollments.find(e => e.id === enrollmentId);
+  if (!enrollment) return;
+  
+  if (enrollment.finalGrade === null || enrollment.finalGrade === undefined) {
+    alert("该学生成绩尚未录入");
+    return;
+  }
+  
+  if (enrollment.published) {
+    alert("该成绩已经发布");
+    return;
+  }
+  
+  enrollment.published = true;
+  saveData(data);
+  addLog(currentUser.id, "审核通过成绩", `课程 ${enrollment.courseId} 学生 ${enrollment.studentId} 成绩 ${enrollment.finalGrade}`);
+  
+  // 刷新详情和列表
+  renderGradeDetail(currentGradeCourseId);
+  renderGradeCourses(gradeCourseSearch.value);
+};
+
+// 批量审核通过
+gradeApproveAllBtn?.addEventListener("click", () => {
+  if (!currentGradeCourseId) return;
+  
+  const data = getData();
+  const enrollments = data.enrollments.filter(e => 
+    e.courseId === currentGradeCourseId && 
+    !e.published && 
+    e.finalGrade !== null && 
+    e.finalGrade !== undefined
+  );
+  
+  if (enrollments.length === 0) {
+    alert("没有待审核的成绩");
+    return;
+  }
+  
+  if (!confirm(`确定要批量审核通过 ${enrollments.length} 条成绩吗？`)) {
+    return;
+  }
+  
+  enrollments.forEach(enrollment => {
+    enrollment.published = true;
+  });
+  
+  saveData(data);
+  addLog(currentUser.id, "批量审核通过成绩", `课程 ${currentGradeCourseId} 共 ${enrollments.length} 条成绩`);
+  
+  // 刷新详情和列表
+  renderGradeDetail(currentGradeCourseId);
+  renderGradeCourses(gradeCourseSearch.value);
+});
+
+// 设置往年平均分
+saveHistoricalAverageBtn?.addEventListener("click", () => {
+  if (!currentGradeCourseId) return;
+  
+  const value = setHistoricalAverageInput.value.trim();
+  const historicalAverage = value ? Number(value) : null;
+  
+  if (value && (isNaN(historicalAverage) || historicalAverage < 0 || historicalAverage > 100)) {
+    alert("请输入0-100之间的有效数字");
+    return;
+  }
+  
+  const data = getData();
+  const course = data.courses.find(c => c.id === currentGradeCourseId);
+  if (!course) return;
+  
+  course.historicalAverage = historicalAverage;
+  saveData(data);
+  addLog(currentUser.id, "设置课程往年平均分", `${course.name} (${course.code}): ${historicalAverage !== null ? historicalAverage + '分' : '已清除'}`);
+  
+  // 刷新详情和列表
+  renderGradeDetail(currentGradeCourseId);
+  renderGradeCourses(gradeCourseSearch.value);
+  
+  alert(historicalAverage !== null ? `已设置往年平均分为 ${historicalAverage} 分` : "已清除往年平均分");
+});
+
+// 关闭详情
+gradeCloseDetailBtn?.addEventListener("click", () => {
+  gradeDetailPanel.style.display = "none";
+  currentGradeCourseId = null;
+  setHistoricalAverageInput.value = "";
+});
+
+// 搜索课程
+gradeCourseSearch?.addEventListener("input", e => {
+  renderGradeCourses(e.target.value);
+});
+
 // ==================== 初始化 ====================
 const init = async () => {
   currentUser = await requireAuth(["admin"]);
@@ -1280,6 +1646,7 @@ const init = async () => {
   renderRelationClassSelect();
   renderRelationCourseSelect();
   renderRelationCourseStudentsSelect();
+  renderGradeCourses();
 };
 
 init();
