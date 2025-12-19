@@ -3,7 +3,20 @@ import { hashPassword, randomSalt, uuid, formatDate } from "./utils.js";
 const createUser = async ({ username, role, password, name, email, className, major, mustChangePassword = false }) => {
   const salt = randomSalt();
   const passwordHash = await hashPassword(password, salt);
-  return { id: uuid(), username, role, name, email, salt, passwordHash, className: className || "", major: major || "", mustChangePassword };
+    return {
+    id: uuid(),
+    username,
+    role,
+    name,
+    email,
+    salt,
+    passwordHash,
+    className: className || "",
+    major: major || "",
+    mustChangePassword,
+    failedAttempts: 0,
+    lockUntil: null
+  };
 };
 
 export const seedData = async () => {

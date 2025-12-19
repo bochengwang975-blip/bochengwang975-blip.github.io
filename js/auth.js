@@ -1,10 +1,28 @@
 import { ensureSeeded, getData, saveData, setSessionUser, clearSession, getSessionUser, addLog, findUserByUsername } from "./storage.js";
 import { hashPassword, randomSalt, uuid } from "./utils.js";
 
+const LOCK_THRESHOLD = 5;
+const LOCK_DURATION = 10 * 60 * 1000; // 10 分钟
+
+
+//注册时生成并存储
 const createUser = async ({ username, password, role, name, email, className, major, mustChangePassword = false }) => {
   const salt = randomSalt();
   const passwordHash = await hashPassword(password, salt);
-  return { id: uuid(), username, role, name, email, salt, passwordHash, className: className || "", major: major || "", mustChangePassword };
+  return {
+    id: uuid(),
+    username,
+    role,
+    name,
+    email,
+    salt,
+    passwordHash,
+    className: className || "",
+    major: major || "",
+    mustChangePassword,
+    failedAttempts: 0,
+    lockUntil: null
+  };
 };
 
 export const login = async (username, password) => {
@@ -12,32 +30,33 @@ export const login = async (username, password) => {
   const data = getData();
   const user = data.users.find(u => u.username === username);
   if (!user) throw new Error("用户不存在");
+  if (user.lockUntil && Date.now() < user.lockUntil) {
+    const mins = Math.ceil((user.lockUntil - Date.now()) / 60000);
+    throw new Error(`账号已锁定，请 ${mins} 分钟后重试`);
+  }
   const hashed = await hashPassword(password, user.salt);
-  if (hashed !== user.passwordHash) throw new Error("密码错误");
+  if (hashed !== user.passwordHash) {
+    user.failedAttempts = (user.failedAttempts || 0) + 1;
+    if (user.failedAttempts >= LOCK_THRESHOLD) {
+      user.lockUntil = Date.now() + LOCK_DURATION;
+      addLog(user.id, "账号锁定", `连续 ${LOCK_THRESHOLD} 次密码错误，锁定 10 分钟`);
+    }
+    saveData(data);
+    throw new Error(user.lockUntil ? "密码错误，账号已暂时锁定" : "密码错误");
+  }
+  user.failedAttempts = 0;
+  user.lockUntil = null;
+  saveData(data);
   setSessionUser(user.id);
   addLog(user.id, "登录系统", `以角色 ${user.role} 登录`);
   return user;
 };
 
-export const changePassword = async (userId, oldPassword, newPassword) => {
-  await ensureSeeded();
-  const data = getData();
-  const user = data.users.find(u => u.id === userId);
-  if (!user) throw new Error("用户不存在");
-  const hashed = await hashPassword(oldPassword, user.salt);
-  if (hashed !== user.passwordHash) throw new Error("原密码错误");
-  const salt = randomSalt();
-  user.salt = salt;
-  user.passwordHash = await hashPassword(newPassword, salt);
-  user.mustChangePassword = false; // 清除强制修改密码标志
-  saveData(data);
-  addLog(user.id, "修改密码", "用户主动修改密码");
-  return true;
-};
 
 export const register = async ({ username, password, name, email, role = "student", className, major }) => {
   await ensureSeeded();
   if (findUserByUsername(username)) throw new Error("用户名已存在");
+  //然后在 register 里把这个用户对象写入持久化存储：(29~32)
   const user = await createUser({ username, password, role, name, email, className, major });
   const data = getData();
   data.users.push(user);
@@ -101,3 +120,4 @@ export const resetPassword = async (token, newPassword) => {
   addLog(user.id, "完成密码重置", "通过邮箱验证后的密码更新");
   return true;
 };
+
