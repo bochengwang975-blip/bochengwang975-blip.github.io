@@ -23,7 +23,9 @@ const renderMyCourses = () => {
   myCoursesEl.innerHTML = "";
   enrollments.forEach(e => {
     const course = data.courses.find(c => c.id === e.courseId);
-    const teacher = data.users.find(u => u.id === course.teacherId);
+    const teacherIds = course?.teacherIds || (course?.teacherId ? [course.teacherId] : []);
+    const teachers = teacherIds.map(tid => data.users.find(u => u.id === tid)).filter(Boolean);
+    const teacherNames = teachers.map(t => t.name).join(", ") || "教师待定";
     const submitted = e.tasks.filter(t => t.status === "已提交" || t.status === "已评分").length;
     const total = e.tasks.length || 1;
     const card = document.createElement("div");
@@ -32,7 +34,7 @@ const renderMyCourses = () => {
       <div class="flex-between">
         <div>
           <div class="badge">${course.code}</div>
-          <strong>${course.name}</strong> / ${teacher?.name || "教师待定"}
+          <strong>${course.name}</strong> / ${teacherNames}
           <p class="muted">任务进度：${submitted}/${total}，课程进度 ${(e.progress * 100).toFixed(0)}%</p>
         </div>
         <div class="table-actions">

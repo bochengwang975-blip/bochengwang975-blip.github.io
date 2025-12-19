@@ -16,13 +16,15 @@ export const addCourse = async (course, teacherId) => {
   await ensureSeeded();
   const data = getData();
   const id = uuid();
+  // 支持单个teacherId或teacherIds数组
+  const teacherIds = course.teacherIds || (teacherId ? [teacherId] : []);
   data.courses.push({
     id,
     code: course.code || `NEW-${Math.floor(Math.random() * 999)}`,
     name: course.name,
     credits: Number(course.credits) || 2,
     department: course.department || "未分配院系",
-    teacherId,
+    teacherIds,
     capacity: course.capacity || 50,
     schedule: course.schedule || "",
     summary: course.summary || "",
@@ -31,7 +33,7 @@ export const addCourse = async (course, teacherId) => {
     tasks: course.tasks || []
   });
   saveData(data);
-  addLog(teacherId, "创建课程", `新增课程 ${course.name}`);
+  addLog(teacherId || teacherIds[0], "创建课程", `新增课程 ${course.name}`);
   return id;
 };
 

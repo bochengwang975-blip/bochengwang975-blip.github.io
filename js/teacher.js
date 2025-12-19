@@ -17,7 +17,10 @@ let currentCourseId = null;
 
 const renderCourses = () => {
   const data = getData();
-  const courses = data.courses.filter(c => c.teacherId === currentUser.id);
+  const courses = data.courses.filter(c => {
+    const teacherIds = c.teacherIds || (c.teacherId ? [c.teacherId] : []);
+    return teacherIds.includes(currentUser.id);
+  });
   courseList.innerHTML = "";
   courses.forEach(c => {
     const item = document.createElement("div");
@@ -58,7 +61,10 @@ const bindCourseButtons = () => {
 
 const renderCourseSelects = () => {
   const data = getData();
-  const courses = data.courses.filter(c => c.teacherId === currentUser.id);
+  const courses = data.courses.filter(c => {
+    const teacherIds = c.teacherIds || (c.teacherId ? [c.teacherId] : []);
+    return teacherIds.includes(currentUser.id);
+  });
   [taskSelect, gradeSelect].forEach(select => {
     select.innerHTML = "";
     courses.forEach(c => {

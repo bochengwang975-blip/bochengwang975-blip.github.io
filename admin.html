@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -20,87 +20,192 @@
     <main class="container">
       <section class="hero">
         <div>
-          <div class="badge">基础数据与账号安全</div>
-          <h1>管理班级、学生、成绩发布</h1>
-          <p class="subtitle">支持 CSV 导入学生、重置密码、审核发布成绩。</p>
-        </div>
-        <div class="card">
-          <h3>教务提示</h3>
-          <p class="muted">支持导入 XLS/CSV 文件批量初始化学生账号。文件格式：学号(student_no)、姓名(name)、班级(className)。初始密码统一设定，首次登录需修改。</p>
-          <p class="muted">CSV 格式示例：student_no,name,className</p>
+          <div class="badge">基础数据与账号管理</div>
+          <h1>管理班级、学生、课程、教师</h1>
+          <p class="subtitle">支持增删改查、批量导入学生账号、关系映射等功能。</p>
         </div>
       </section>
 
-      <section class="grid grid-2">
-        <div class="card">
-          <h3>班级管理</h3>
-          <form id="class-form" class="list">
-            <input name="name" placeholder="班级名称" required />
-            <input name="size" type="number" placeholder="人数" />
-            <input name="counselor" placeholder="辅导员" />
-            <button type="submit">添加班级</button>
-          </form>
-          <div id="class-list" class="list"></div>
+      <!-- 标签页导航 -->
+      <section class="card" style="margin-bottom: 2rem;">
+        <div class="tab-row" id="main-tabs">
+          <div class="tab active" data-tab="classes">班级管理</div>
+          <div class="tab" data-tab="students">学生管理</div>
+          <div class="tab" data-tab="courses">课程管理</div>
+          <div class="tab" data-tab="teachers">教师管理</div>
+          <div class="tab" data-tab="relations">关系映射</div>
         </div>
+      </section>
 
-        <div class="card">
-          <h3>批量导入学生账号</h3>
-          <p class="subtitle">支持 XLS/CSV 文件导入，或手动粘贴 CSV 文本</p>
-          <div class="list">
-            <label for="file-input" style="display: block; margin-bottom: 0.5rem;">
-              <strong>选择文件（XLS/CSV）：</strong>
-            </label>
-            <input type="file" id="file-input" accept=".xls,.xlsx,.csv" style="margin-bottom: 1rem;" />
-            <p class="muted" style="margin-bottom: 1rem;">或手动粘贴 CSV 文本：</p>
-            <textarea id="csv-input" rows="6" placeholder="student_no,name,className&#10;2022001,张三,计科22-1&#10;2022002,李四,计科22-1"></textarea>
-            <div style="margin: 1rem 0;">
-              <label for="initial-password" style="display: block; margin-bottom: 0.5rem;">
-                <strong>统一初始密码：</strong>
+      <!-- 班级管理 -->
+      <section id="classes-panel" class="tab-panel">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>添加/编辑班级</h3>
+            <form id="class-form" class="list">
+              <input type="hidden" id="class-id" name="id" />
+              <input name="name" id="class-name" placeholder="班级名称" required />
+              <input name="counselor" id="class-counselor" placeholder="辅导员" />
+              <div class="flex">
+                <button type="submit" id="class-submit-btn">添加班级</button>
+                <button type="button" id="class-cancel-btn" class="secondary" style="display: none;">取消</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>班级列表</h3>
+            <div id="class-list" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 学生管理 -->
+      <section id="students-panel" class="tab-panel hidden">
+        <div class="grid grid-3">
+          <div class="card">
+            <h3>添加/编辑学生</h3>
+            <form id="student-form" class="list">
+              <input type="hidden" id="student-id" name="id" />
+              <input name="username" id="student-username" placeholder="学号/用户名" required />
+              <input name="name" id="student-name" placeholder="姓名" required />
+              <input name="email" id="student-email" type="email" placeholder="邮箱" />
+              <select name="className" id="student-class" required>
+                <option value="">选择班级</option>
+              </select>
+              <input name="major" id="student-major" placeholder="专业" />
+              <div class="flex">
+                <button type="submit" id="student-submit-btn">添加学生</button>
+                <button type="button" id="student-cancel-btn" class="secondary" style="display: none;">取消</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>批量导入学生账号</h3>
+            <p class="subtitle">支持 XLS/CSV 文件导入，或手动粘贴 CSV 文本</p>
+            <div class="list">
+              <label for="file-input" style="display: block; margin-bottom: 0.5rem;">
+                <strong>选择文件（XLS/CSV）：</strong>
               </label>
-              <input type="text" id="initial-password" value="Student123" placeholder="初始密码" style="width: 100%;" />
+              <input type="file" id="file-input" accept=".xls,.xlsx,.csv" style="margin-bottom: 1rem;" />
+              <p class="muted" style="margin-bottom: 1rem;">或手动粘贴 CSV 文本：</p>
+              <textarea id="csv-input" rows="6" placeholder="student_no,name,className&#10;2022001,张三,计科22-1&#10;2022002,李四,计科22-1"></textarea>
+              <div style="margin: 1rem 0;">
+                <label for="initial-password" style="display: block; margin-bottom: 0.5rem;">
+                  <strong>统一初始密码：</strong>
+                </label>
+                <input type="text" id="initial-password" value="Student123" placeholder="初始密码" style="width: 100%;" />
+              </div>
+              <button id="import-btn">批量导入</button>
             </div>
-            <button id="import-btn">批量导入</button>
+            <div id="import-result" class="muted" style="margin-top: 1rem;"></div>
           </div>
-          <div id="import-result" class="muted" style="margin-top: 1rem;"></div>
+          <div class="card">
+            <h3>学生列表</h3>
+            <div style="margin-bottom: 1rem;">
+              <input type="text" id="student-search" placeholder="搜索学生（姓名/学号）" style="width: 100%;" />
+            </div>
+            <div id="student-list" class="list"></div>
+          </div>
         </div>
       </section>
 
-      <section class="grid grid-2">
-        <div class="card">
-          <h3>账号安全</h3>
-          <form id="reset-form" class="list">
-            <input name="username" placeholder="用户名" required />
-            <input name="newPassword" placeholder="新密码" required />
-            <button type="submit">强制重置密码</button>
-          </form>
-          <p class="muted">重置后密码将使用新盐重新哈希。</p>
-        </div>
-
-        <div class="card">
-          <h3>成绩审核发布</h3>
-          <p class="subtitle">查看待发布的成绩，批量一键发布。</p>
-          <div class="scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>课程</th>
-                  <th>学生</th>
-                  <th>成绩</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="review-rows"></tbody>
-            </table>
+      <!-- 课程管理 -->
+      <section id="courses-panel" class="tab-panel hidden">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>添加/编辑课程</h3>
+            <form id="course-form" class="list">
+              <input type="hidden" id="course-id" name="id" />
+              <input name="code" id="course-code" placeholder="课程代码" required />
+              <input name="name" id="course-name" placeholder="课程名称" required />
+              <input name="credits" id="course-credits" type="number" placeholder="学分" min="0" step="0.5" />
+              <input name="department" id="course-department" placeholder="所属院系" />
+              <input name="capacity" id="course-capacity" type="number" placeholder="容量" min="0" />
+              <input name="schedule" id="course-schedule" placeholder="上课时间地点" />
+              <textarea name="summary" id="course-summary" placeholder="课程简介" rows="3"></textarea>
+              <div>
+                <label style="display: block; margin-bottom: 0.5rem;"><strong>授课教师（可多选）：</strong></label>
+                <div id="course-teachers" style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 0.5rem; border-radius: 4px;"></div>
+              </div>
+              <div class="flex">
+                <button type="submit" id="course-submit-btn">添加课程</button>
+                <button type="button" id="course-cancel-btn" class="secondary" style="display: none;">取消</button>
+              </div>
+            </form>
           </div>
-          <button id="publish-all">发布所有待审核成绩</button>
+          <div class="card">
+            <h3>课程列表</h3>
+            <div style="margin-bottom: 1rem;">
+              <input type="text" id="course-search" placeholder="搜索课程（名称/代码）" style="width: 100%;" />
+            </div>
+            <div id="course-list" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 教师管理 -->
+      <section id="teachers-panel" class="tab-panel hidden">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>添加/编辑教师</h3>
+            <form id="teacher-form" class="list">
+              <input type="hidden" id="teacher-id" name="id" />
+              <input name="username" id="teacher-username" placeholder="工号/用户名" required />
+              <input name="name" id="teacher-name" placeholder="姓名" required />
+              <input name="email" id="teacher-email" type="email" placeholder="邮箱" />
+              <input name="department" id="teacher-department" placeholder="所属院系" />
+              <div class="flex">
+                <button type="submit" id="teacher-submit-btn">添加教师</button>
+                <button type="button" id="teacher-cancel-btn" class="secondary" style="display: none;">取消</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>教师列表</h3>
+            <div style="margin-bottom: 1rem;">
+              <input type="text" id="teacher-search" placeholder="搜索教师（姓名/工号）" style="width: 100%;" />
+            </div>
+            <div id="teacher-list" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 关系映射 -->
+      <section id="relations-panel" class="tab-panel hidden">
+        <div class="grid grid-3">
+          <div class="card">
+            <h3>班级 - 学生关系</h3>
+            <p class="subtitle">查看每个班级的学生列表</p>
+            <select id="relation-class-select" style="width: 100%; margin-bottom: 1rem;">
+              <option value="">选择班级</option>
+            </select>
+            <div id="class-students-list" class="list"></div>
+          </div>
+          <div class="card">
+            <h3>课程 - 教师关系</h3>
+            <p class="subtitle">查看每门课程的授课教师</p>
+            <select id="relation-course-select" style="width: 100%; margin-bottom: 1rem;">
+              <option value="">选择课程</option>
+            </select>
+            <div id="course-teachers-list" class="list"></div>
+          </div>
+          <div class="card">
+            <h3>课程 - 学生关系</h3>
+            <p class="subtitle">查看每门课程的选课学生</p>
+            <select id="relation-course-students-select" style="width: 100%; margin-bottom: 1rem;">
+              <option value="">选择课程</option>
+            </select>
+            <div id="course-students-list" class="list"></div>
+          </div>
         </div>
       </section>
     </main>
 
-    <div class="footer">教务端可查看全部成绩并进行审核。</div>
+    <div class="footer">教务端可管理全部基础信息并进行批量操作。</div>
 
     <!-- SheetJS库用于解析Excel文件 -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script type="module" src="js/admin.js"></script>
   </body>
 </html>
+

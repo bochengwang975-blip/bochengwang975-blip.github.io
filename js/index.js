@@ -12,7 +12,9 @@ const renderCourses = async keyword => {
   const courses = await searchCourses(keyword);
   courseCards.innerHTML = "";
   courses.forEach(c => {
-    const teacher = data.users.find(u => u.id === c.teacherId);
+    const teacherIds = c.teacherIds || (c.teacherId ? [c.teacherId] : []);
+    const teachers = teacherIds.map(tid => data.users.find(u => u.id === tid)).filter(Boolean);
+    const teacherNames = teachers.map(t => t.name).join(", ") || "未分配";
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
@@ -24,7 +26,7 @@ const renderCourses = async keyword => {
           <div class="flex">
             <span class="chip">院系：${c.department}</span>
             <span class="chip">学分：${c.credits}</span>
-            <span class="chip">教师：${teacher?.name || "未分配"}</span>
+            <span class="chip">教师：${teacherNames}</span>
           </div>
           <p class="muted">时间/地点：${c.schedule}</p>
         </div>

@@ -20,7 +20,7 @@ export const seedData = async () => {
       name: "Web全栈开发",
       credits: 3,
       department: "计算机学院",
-      teacherId: teacher.id,
+      teacherIds: [teacher.id], // 支持多个教师
       capacity: 60,
       schedule: "周一 3-4 节，A402",
       summary: "HTML5 + CSS3 + JS 现代前端实战，结合本地存储完成课程与成绩管理小型系统。",
@@ -41,7 +41,7 @@ export const seedData = async () => {
       name: "数据结构",
       credits: 4,
       department: "计算机学院",
-      teacherId: teacher.id,
+      teacherIds: [teacher.id], // 支持多个教师
       capacity: 80,
       schedule: "周三 5-6 节，B202",
       summary: "链表、树、图及算法复杂度分析，含课程实验与阶段测验。",
@@ -87,8 +87,8 @@ export const seedData = async () => {
   ];
 
   const classes = [
-    { id: uuid(), name: "计科22-1", size: 40, counselor: "赵老师" },
-    { id: uuid(), name: "信安22-2", size: 36, counselor: "周老师" }
+    { id: uuid(), name: "计科22-1", counselor: "赵老师" },
+    { id: uuid(), name: "信安22-2", counselor: "周老师" }
   ];
 
   const logs = [
