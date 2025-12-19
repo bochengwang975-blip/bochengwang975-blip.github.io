@@ -22,7 +22,8 @@ export const seedData = async () => {
       department: "计算机学院",
       teacherIds: [teacher.id], // 支持多个教师
       capacity: 60,
-      schedule: "周一 3-4 节，A402",
+      time: { day: 1, period: 3 }, // 周一，第3节课（上午第1节）
+      location: "A402",
       summary: "HTML5 + CSS3 + JS 现代前端实战，结合本地存储完成课程与成绩管理小型系统。",
       tags: ["前端", "项目制", "实战"],
       materials: [
@@ -43,7 +44,8 @@ export const seedData = async () => {
       department: "计算机学院",
       teacherIds: [teacher.id], // 支持多个教师
       capacity: 80,
-      schedule: "周三 5-6 节，B202",
+      time: { day: 3, period: 5 }, // 周三，第5节课（下午第1节）
+      location: "B202",
       summary: "链表、树、图及算法复杂度分析，含课程实验与阶段测验。",
       tags: ["算法", "核心必修"],
       materials: [{ id: uuid(), title: "实验指导书", type: "doc", url: "#", desc: "实验 1-6 文档" }],

@@ -121,7 +121,26 @@
               <input name="credits" id="course-credits" type="number" placeholder="学分" min="0" step="0.5" />
               <input name="department" id="course-department" placeholder="所属院系" />
               <input name="capacity" id="course-capacity" type="number" placeholder="容量" min="0" />
-              <input name="schedule" id="course-schedule" placeholder="上课时间地点" />
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <select name="time-day" id="course-time-day" required>
+                  <option value="">选择星期</option>
+                  <option value="1">周一</option>
+                  <option value="2">周二</option>
+                  <option value="3">周三</option>
+                  <option value="4">周四</option>
+                  <option value="5">周五</option>
+                </select>
+                <select name="time-period" id="course-time-period" required>
+                  <option value="">选择节次</option>
+                  <option value="1">上午第1节</option>
+                  <option value="2">上午第2节</option>
+                  <option value="3">下午第1节</option>
+                  <option value="4">下午第2节</option>
+                  <option value="5">晚上</option>
+                </select>
+              </div>
+              <input name="location" id="course-location" placeholder="上课地点（如：A402）" required />
+              <div id="schedule-conflict-warning" style="display: none; padding: 0.5rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin: 0.5rem 0; color: #856404;"></div>
               <textarea name="summary" id="course-summary" placeholder="课程简介" rows="3"></textarea>
               <div>
                 <label style="display: block; margin-bottom: 0.5rem;"><strong>授课教师（可多选）：</strong></label>
@@ -140,6 +159,12 @@
             </div>
             <div id="course-list" class="list"></div>
           </div>
+        </div>
+        <div class="card" style="margin-top: 2rem;">
+          <h3>周课表视图</h3>
+          <p class="subtitle">显示所有课程的排课情况</p>
+          <div id="admin-schedule-view" style="overflow-x: auto;"></div>
+        </div>
         </div>
       </section>
 

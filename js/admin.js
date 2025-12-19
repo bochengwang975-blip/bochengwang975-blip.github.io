@@ -2,6 +2,7 @@ import { requireAuth } from "./auth.js";
 import { ensureSeeded, getData, saveData, addLog, findUserByUsername } from "./storage.js";
 import { hashPassword, randomSalt, uuid, parseCSV } from "./utils.js";
 import { setupNav } from "./common.js";
+import { checkScheduleConflict, generateWeeklySchedule, formatTime, formatLocation, DAY_NAMES, PERIOD_NAMES } from "./schedule.js";
 
 let currentUser = null;
 let editingClassId = null;
@@ -29,6 +30,7 @@ tabs.forEach(tab => {
     } else if (targetTab === "courses") {
       renderTeacherSelect();
       renderCourses();
+      renderAdminSchedule();
     } else if (targetTab === "teachers") renderTeachers();
     else if (targetTab === "relations") {
       renderRelationClassSelect();
@@ -611,11 +613,14 @@ const renderCourses = (searchTerm = "") => {
       const t = data.users.find(u => u.id === tid);
       return t ? t.name : "未知";
     }).join(", ") || "未分配";
+    const timeStr = c.time ? formatTime(c.time) : (c.schedule || "未设置");
+    const locationStr = c.location || (c.schedule ? "" : "未设置");
     item.innerHTML = `
       <div class="flex-between">
         <div>
           <strong>${c.name}</strong> <span class="muted">(${c.code})</span>
           <p class="muted">学分：${c.credits || 0} | 院系：${c.department || "未设置"} | 教师：${teachers}</p>
+          <p class="muted">时间：${timeStr} | 地点：${locationStr}</p>
           <p class="muted">${c.summary || ""}</p>
         </div>
         <div>
@@ -656,7 +661,18 @@ const editCourse = (id) => {
   document.getElementById("course-credits").value = course.credits || "";
   document.getElementById("course-department").value = course.department || "";
   document.getElementById("course-capacity").value = course.capacity || "";
-  document.getElementById("course-schedule").value = course.schedule || "";
+  
+  // 设置时间和地点
+  const time = course.time || (course.schedule ? null : null);
+  if (time && time.day && time.period) {
+    document.getElementById("course-time-day").value = time.day;
+    document.getElementById("course-time-period").value = time.period;
+  } else {
+    document.getElementById("course-time-day").value = "";
+    document.getElementById("course-time-period").value = "";
+  }
+  document.getElementById("course-location").value = course.location || "";
+  
   document.getElementById("course-summary").value = course.summary || "";
   
   // 设置教师选择
@@ -669,6 +685,7 @@ const editCourse = (id) => {
   courseCancelBtn.style.display = "inline-block";
   editingCourseId = id;
   courseForm.scrollIntoView({ behavior: "smooth" });
+  checkConflictOnChange();
 };
 
 const deleteCourse = (id) => {
@@ -688,6 +705,53 @@ const deleteCourse = (id) => {
   resetCourseForm();
 };
 
+// 冲突检测函数
+const checkConflictOnChange = () => {
+  const timeDay = document.getElementById("course-time-day").value;
+  const timePeriod = document.getElementById("course-time-period").value;
+  const location = document.getElementById("course-location").value.trim();
+  const warningDiv = document.getElementById("schedule-conflict-warning");
+  
+  if (!timeDay || !timePeriod) {
+    warningDiv.style.display = "none";
+    return;
+  }
+
+  const selectedTeachers = Array.from(courseTeachersDiv.querySelectorAll("input[type='checkbox']:checked"))
+    .map(cb => cb.value);
+  
+  if (selectedTeachers.length === 0) {
+    warningDiv.style.display = "none";
+    return;
+  }
+
+  const newCourse = {
+    id: editingCourseId || null,
+    time: { day: parseInt(timeDay), period: parseInt(timePeriod) },
+    location,
+    teacherIds: selectedTeachers
+  };
+
+  const conflictResult = checkScheduleConflict(newCourse);
+  
+  if (conflictResult.hasConflict) {
+    warningDiv.style.display = "block";
+    const messages = conflictResult.conflicts.map(c => c.message).join("；");
+    warningDiv.textContent = `⚠️ 排课冲突：${messages}`;
+    warningDiv.style.background = "#fff3cd";
+    warningDiv.style.borderColor = "#ffc107";
+    warningDiv.style.color = "#856404";
+  } else {
+    warningDiv.style.display = "none";
+  }
+};
+
+// 监听时间和地点变化
+document.getElementById("course-time-day")?.addEventListener("change", checkConflictOnChange);
+document.getElementById("course-time-period")?.addEventListener("change", checkConflictOnChange);
+document.getElementById("course-location")?.addEventListener("input", checkConflictOnChange);
+courseTeachersDiv?.addEventListener("change", checkConflictOnChange);
+
 courseForm?.addEventListener("submit", e => {
   e.preventDefault();
   const form = new FormData(courseForm);
@@ -697,7 +761,9 @@ courseForm?.addEventListener("submit", e => {
   const credits = Number(form.get("credits")) || 0;
   const department = form.get("department").trim();
   const capacity = Number(form.get("capacity")) || 0;
-  const schedule = form.get("schedule").trim();
+  const timeDay = form.get("time-day");
+  const timePeriod = form.get("time-period");
+  const location = form.get("location").trim();
   const summary = form.get("summary").trim();
   
   // 获取选中的教师
@@ -707,6 +773,35 @@ courseForm?.addEventListener("submit", e => {
   if (selectedTeachers.length === 0) {
     alert("请至少选择一名授课教师");
     return;
+  }
+
+  if (!timeDay || !timePeriod) {
+    alert("请选择上课时间和节次");
+    return;
+  }
+
+  if (!location) {
+    alert("请输入上课地点");
+    return;
+  }
+
+  // 构建时间和地点对象
+  const time = { day: parseInt(timeDay), period: parseInt(timePeriod) };
+  
+  // 检查冲突
+  const newCourse = {
+    id: editingCourseId || null,
+    time,
+    location,
+    teacherIds: selectedTeachers
+  };
+
+  const conflictResult = checkScheduleConflict(newCourse);
+  if (conflictResult.hasConflict) {
+    const messages = conflictResult.conflicts.map(c => c.message).join("；");
+    if (!confirm(`检测到排课冲突：${messages}\n\n是否仍要继续添加/更新课程？`)) {
+      return;
+    }
   }
   
   if (editingCourseId) {
@@ -723,10 +818,12 @@ courseForm?.addEventListener("submit", e => {
       course.credits = credits;
       course.department = department;
       course.capacity = capacity;
-      course.schedule = schedule;
+      course.time = time;
+      course.location = location;
       course.summary = summary;
       course.teacherIds = selectedTeachers;
-      // 兼容旧数据
+      // 兼容旧数据：删除旧的schedule字段
+      if (course.schedule) delete course.schedule;
       if (course.teacherId) delete course.teacherId;
       saveData(data);
       addLog(currentUser.id, "更新课程", name);
@@ -744,7 +841,8 @@ courseForm?.addEventListener("submit", e => {
       credits,
       department,
       capacity,
-      schedule,
+      time,
+      location,
       summary,
       teacherIds: selectedTeachers,
       tags: [],
@@ -756,6 +854,7 @@ courseForm?.addEventListener("submit", e => {
     addLog(currentUser.id, "新增课程", name);
   }
   renderCourses(courseSearch.value);
+  renderAdminSchedule();
   resetCourseForm();
 });
 
@@ -763,6 +862,7 @@ const resetCourseForm = () => {
   courseForm.reset();
   document.getElementById("course-id").value = "";
   courseTeachersDiv.querySelectorAll("input[type='checkbox']").forEach(cb => cb.checked = false);
+  document.getElementById("schedule-conflict-warning").style.display = "none";
   courseSubmitBtn.textContent = "添加课程";
   courseCancelBtn.style.display = "none";
   editingCourseId = null;
@@ -770,6 +870,62 @@ const resetCourseForm = () => {
 
 courseCancelBtn?.addEventListener("click", resetCourseForm);
 courseSearch?.addEventListener("input", e => renderCourses(e.target.value));
+
+// ==================== 管理员课表视图 ====================
+const adminScheduleView = document.getElementById("admin-schedule-view");
+
+const renderAdminSchedule = () => {
+  const scheduleData = generateWeeklySchedule(null, "admin");
+  const { schedule } = scheduleData;
+
+  let html = `
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+      <thead>
+        <tr>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">时间</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周一</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周二</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周三</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周四</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周五</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  const periodLabels = ["上午第1节", "上午第2节", "下午第1节", "下午第2节", "晚上"];
+  
+  for (let period = 0; period < 5; period++) {
+    html += `<tr>`;
+    html += `<td style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; font-weight: bold;">${periodLabels[period]}</td>`;
+    
+    for (let day = 0; day < 5; day++) {
+      const cellContent = schedule[day][period];
+      html += `<td style="border: 1px solid #ddd; padding: 0.5rem; vertical-align: top; min-height: 80px;">`;
+      
+      if (cellContent && Array.isArray(cellContent) && cellContent.length > 0) {
+        cellContent.forEach(item => {
+          html += `
+            <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #e3f2fd; border-radius: 4px; font-size: 0.9em;">
+              <strong>${item.course.name}</strong><br/>
+              <span class="muted">${item.course.code}</span><br/>
+              <span class="muted">${item.location}</span><br/>
+              <span class="muted">${item.teachers}</span>
+            </div>
+          `;
+        });
+      } else {
+        html += `<span class="muted" style="font-size: 0.9em;">-</span>`;
+      }
+      
+      html += `</td>`;
+    }
+    html += `</tr>`;
+  }
+
+  html += `</tbody></table>`;
+  adminScheduleView.innerHTML = html;
+};
 
 // ==================== 教师管理 ====================
 const teacherForm = document.getElementById("teacher-form");
@@ -947,7 +1103,8 @@ teacherForm?.addEventListener("submit", async e => {
       role: "teacher",
       department,
       salt,
-      passwordHash
+      passwordHash,
+      mustChangePassword: true // 标记首次登录需修改密码
     };
     data.users.push(newTeacher);
     saveData(data);
@@ -1118,6 +1275,7 @@ const init = async () => {
   renderStudents();
   renderTeacherSelect();
   renderCourses();
+  renderAdminSchedule();
   renderTeachers();
   renderRelationClassSelect();
   renderRelationCourseSelect();

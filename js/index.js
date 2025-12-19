@@ -1,6 +1,7 @@
 import { ensureSeeded, getData, getSessionUser } from "./storage.js";
 import { searchCourses, enrollCourse } from "./courses.js";
 import { setupNav } from "./common.js";
+import { formatTime, formatLocation } from "./schedule.js";
 
 const courseCards = document.getElementById("course-cards");
 const searchInput = document.getElementById("search");
@@ -28,7 +29,7 @@ const renderCourses = async keyword => {
             <span class="chip">学分：${c.credits}</span>
             <span class="chip">教师：${teacherNames}</span>
           </div>
-          <p class="muted">时间/地点：${c.schedule}</p>
+          <p class="muted">时间：${c.time ? formatTime(c.time) : (c.schedule || "未设置")} | 地点：${c.location ? formatLocation(c.location) : (c.schedule ? "" : "未设置")}</p>
         </div>
       </div>
       <div class="flex-between">

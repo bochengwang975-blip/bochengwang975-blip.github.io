@@ -2,6 +2,7 @@ import { requireAuth } from "./auth.js";
 import { ensureSeeded, getData, saveData, addLog } from "./storage.js";
 import { searchCourses, enrollCourse, dropEnrollment } from "./courses.js";
 import { setupNav } from "./common.js";
+import { generateWeeklySchedule, formatTime, formatLocation } from "./schedule.js";
 
 const myCoursesEl = document.getElementById("my-courses");
 const availableCoursesEl = document.getElementById("available-courses");
@@ -28,6 +29,8 @@ const renderMyCourses = () => {
     const teacherNames = teachers.map(t => t.name).join(", ") || "教师待定";
     const submitted = e.tasks.filter(t => t.status === "已提交" || t.status === "已评分").length;
     const total = e.tasks.length || 1;
+    const timeStr = course.time ? formatTime(course.time) : (course.schedule || "未设置");
+    const locationStr = course.location || (course.schedule ? "" : "未设置");
     const card = document.createElement("div");
     card.className = "list-item";
     card.innerHTML = `
@@ -35,6 +38,7 @@ const renderMyCourses = () => {
         <div>
           <div class="badge">${course.code}</div>
           <strong>${course.name}</strong> / ${teacherNames}
+          <p class="muted">时间：${timeStr} | 地点：${locationStr}</p>
           <p class="muted">任务进度：${submitted}/${total}，课程进度 ${(e.progress * 100).toFixed(0)}%</p>
         </div>
         <div class="table-actions">
@@ -56,6 +60,7 @@ const renderMyCourses = () => {
       renderMyCourses();
       renderAvailableCourses(searchInput.value);
       renderGrades();
+      renderStudentSchedule();
       detailBody.innerHTML = "";
     })
   );
@@ -69,11 +74,14 @@ const renderAvailableCourses = async keyword => {
   courses.forEach(c => {
     const row = document.createElement("div");
     row.className = "list-item";
+    const timeStr = c.time ? formatTime(c.time) : (c.schedule || "未设置");
+    const locationStr = c.location || (c.schedule ? "" : "未设置");
     row.innerHTML = `
       <div class="flex-between">
         <div>
           <strong>${c.name}</strong> <span class="muted">${c.code}</span>
           <p class="muted">${c.summary}</p>
+          <p class="muted">时间：${timeStr} | 地点：${locationStr}</p>
         </div>
         <button class="mini" data-enroll="${c.id}">选课</button>
       </div>
@@ -86,6 +94,7 @@ const renderAvailableCourses = async keyword => {
       renderMyCourses();
       renderAvailableCourses(searchInput.value);
       renderGrades();
+      renderStudentSchedule();
     })
   );
 };
@@ -134,11 +143,13 @@ const renderDetail = courseId => {
     .map(m => `<li class="list-item">${m.title} (${m.type}) - ${m.desc}</li>`)
     .join("");
 
+  const timeStr = course.time ? formatTime(course.time) : (course.schedule || "未设置");
+  const locationStr = course.location || (course.schedule ? "" : "未设置");
   detailBody.innerHTML = `
     <div class="highlight">
       <h4>${course.name}</h4>
       <p class="muted">${course.summary}</p>
-      <p class="muted">时间：${course.schedule} / 学分：${course.credits}</p>
+      <p class="muted">时间：${timeStr} | 地点：${locationStr} | 学分：${course.credits}</p>
     </div>
     <h4>任务与提交</h4>
     <div class="scroll">
@@ -185,6 +196,63 @@ const exportGrades = () => {
   URL.revokeObjectURL(url);
 };
 
+// 学生课表视图
+const studentScheduleView = document.getElementById("student-schedule-view");
+
+const renderStudentSchedule = () => {
+  if (!studentScheduleView) return;
+  const scheduleData = generateWeeklySchedule(currentUser.id, "student");
+  const { schedule } = scheduleData;
+
+  let html = `
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+      <thead>
+        <tr>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">时间</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周一</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周二</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周三</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周四</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周五</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  const periodLabels = ["上午第1节", "上午第2节", "下午第1节", "下午第2节", "晚上"];
+  
+  for (let period = 0; period < 5; period++) {
+    html += `<tr>`;
+    html += `<td style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; font-weight: bold;">${periodLabels[period]}</td>`;
+    
+    for (let day = 0; day < 5; day++) {
+      const cellContent = schedule[day][period];
+      html += `<td style="border: 1px solid #ddd; padding: 0.5rem; vertical-align: top; min-height: 80px;">`;
+      
+      if (cellContent && Array.isArray(cellContent) && cellContent.length > 0) {
+        cellContent.forEach(item => {
+          html += `
+            <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #e3f2fd; border-radius: 4px; font-size: 0.9em;">
+              <strong>${item.course.name}</strong><br/>
+              <span class="muted">${item.course.code}</span><br/>
+              <span class="muted">${item.location}</span><br/>
+              <span class="muted">${item.teachers}</span>
+            </div>
+          `;
+        });
+      } else {
+        html += `<span class="muted" style="font-size: 0.9em;">-</span>`;
+      }
+      
+      html += `</td>`;
+    }
+    html += `</tr>`;
+  }
+
+  html += `</tbody></table>`;
+  studentScheduleView.innerHTML = html;
+};
+
 const init = async () => {
   currentUser = await requireAuth(["student"]);
   if (!currentUser) return;
@@ -194,6 +262,7 @@ const init = async () => {
   renderMyCourses();
   renderAvailableCourses("");
   renderGrades();
+  renderStudentSchedule();
 };
 
 init();

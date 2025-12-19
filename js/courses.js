@@ -18,6 +18,19 @@ export const addCourse = async (course, teacherId) => {
   const id = uuid();
   // 支持单个teacherId或teacherIds数组
   const teacherIds = course.teacherIds || (teacherId ? [teacherId] : []);
+  
+  // 处理时间和地点
+  let time = null;
+  let location = "";
+  
+  if (course.time && course.time.day && course.time.period) {
+    time = { day: parseInt(course.time.day), period: parseInt(course.time.period) };
+  }
+  
+  if (course.location) {
+    location = course.location.trim();
+  }
+  
   data.courses.push({
     id,
     code: course.code || `NEW-${Math.floor(Math.random() * 999)}`,
@@ -26,7 +39,8 @@ export const addCourse = async (course, teacherId) => {
     department: course.department || "未分配院系",
     teacherIds,
     capacity: course.capacity || 50,
-    schedule: course.schedule || "",
+    time,
+    location,
     summary: course.summary || "",
     tags: course.tags || [],
     materials: course.materials || [],

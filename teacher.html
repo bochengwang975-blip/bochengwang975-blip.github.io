@@ -36,13 +36,36 @@
           <div id="teacher-courses" class="list"></div>
         </div>
         <div class="card">
+          <h3>我的周课表</h3>
+          <div id="teacher-schedule-view" style="overflow-x: auto;"></div>
+        </div>
+        <div class="card">
           <h3>新建课程</h3>
           <form id="course-form" class="list">
             <input name="name" placeholder="课程名称" required />
             <input name="code" placeholder="课程代码" />
             <input name="department" placeholder="院系" />
             <input name="credits" type="number" placeholder="学分" />
-            <input name="schedule" placeholder="时间地点，例如 周二 1-2 节 A402" />
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <select name="time-day" id="teacher-course-time-day" required>
+                <option value="">选择星期</option>
+                <option value="1">周一</option>
+                <option value="2">周二</option>
+                <option value="3">周三</option>
+                <option value="4">周四</option>
+                <option value="5">周五</option>
+              </select>
+              <select name="time-period" id="teacher-course-time-period" required>
+                <option value="">选择节次</option>
+                <option value="1">上午第1节</option>
+                <option value="2">上午第2节</option>
+                <option value="3">下午第1节</option>
+                <option value="4">下午第2节</option>
+                <option value="5">晚上</option>
+              </select>
+            </div>
+            <input name="location" id="teacher-course-location" placeholder="上课地点（如：A402）" required />
+            <div id="teacher-schedule-conflict-warning" style="display: none; padding: 0.5rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin: 0.5rem 0; color: #856404;"></div>
             <textarea name="summary" placeholder="课程简介"></textarea>
             <button type="submit">创建课程</button>
           </form>

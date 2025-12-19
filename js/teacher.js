@@ -2,6 +2,7 @@ import { requireAuth } from "./auth.js";
 import { ensureSeeded, getData, saveData, addLog } from "./storage.js";
 import { addCourse, addTaskToCourse, getCourseEnrollments, recordTaskScore, publishFinalGrade } from "./courses.js";
 import { setupNav } from "./common.js";
+import { checkScheduleConflict, generateWeeklySchedule, formatTime, formatLocation } from "./schedule.js";
 
 const courseList = document.getElementById("teacher-courses");
 const courseForm = document.getElementById("course-form");
@@ -25,11 +26,14 @@ const renderCourses = () => {
   courses.forEach(c => {
     const item = document.createElement("div");
     item.className = "list-item";
+    const timeStr = c.time ? formatTime(c.time) : (c.schedule || "未设置");
+    const locationStr = c.location || (c.schedule ? "" : "未设置");
     item.innerHTML = `
       <div class="flex-between">
         <div>
           <strong>${c.name}</strong> <span class="muted">${c.code}</span>
           <p class="muted">${c.summary}</p>
+          <p class="muted">时间：${timeStr} | 地点：${locationStr}</p>
           <div class="flex">
             <span class="chip">学分 ${c.credits}</span>
             <span class="chip">${c.department}</span>
@@ -78,13 +82,81 @@ const renderCourseSelects = () => {
   if (courses.length) currentCourseId = taskSelect.value;
 };
 
+// 教师端冲突检测
+const checkTeacherConflict = () => {
+  const timeDay = document.getElementById("teacher-course-time-day")?.value;
+  const timePeriod = document.getElementById("teacher-course-time-period")?.value;
+  const location = document.getElementById("teacher-course-location")?.value?.trim();
+  const warningDiv = document.getElementById("teacher-schedule-conflict-warning");
+  
+  if (!timeDay || !timePeriod || !warningDiv) return;
+
+  const newCourse = {
+    id: null,
+    time: { day: parseInt(timeDay), period: parseInt(timePeriod) },
+    location,
+    teacherIds: [currentUser.id]
+  };
+
+  const conflictResult = checkScheduleConflict(newCourse);
+  
+  if (conflictResult.hasConflict) {
+    warningDiv.style.display = "block";
+    const messages = conflictResult.conflicts.map(c => c.message).join("；");
+    warningDiv.textContent = `⚠️ 排课冲突：${messages}`;
+    warningDiv.style.background = "#fff3cd";
+    warningDiv.style.borderColor = "#ffc107";
+    warningDiv.style.color = "#856404";
+  } else {
+    warningDiv.style.display = "none";
+  }
+};
+
+document.getElementById("teacher-course-time-day")?.addEventListener("change", checkTeacherConflict);
+document.getElementById("teacher-course-time-period")?.addEventListener("change", checkTeacherConflict);
+document.getElementById("teacher-course-location")?.addEventListener("input", checkTeacherConflict);
+
 courseForm?.addEventListener("submit", async e => {
   e.preventDefault();
   const form = new FormData(courseForm);
+  const timeDay = form.get("time-day");
+  const timePeriod = form.get("time-period");
+  const location = form.get("location")?.trim();
+
+  if (!timeDay || !timePeriod) {
+    alert("请选择上课时间和节次");
+    return;
+  }
+
+  if (!location) {
+    alert("请输入上课地点");
+    return;
+  }
+
+  // 检查冲突
+  const newCourse = {
+    id: null,
+    time: { day: parseInt(timeDay), period: parseInt(timePeriod) },
+    location,
+    teacherIds: [currentUser.id]
+  };
+
+  const conflictResult = checkScheduleConflict(newCourse);
+  if (conflictResult.hasConflict) {
+    const messages = conflictResult.conflicts.map(c => c.message).join("；");
+    if (!confirm(`检测到排课冲突：${messages}\n\n是否仍要继续创建课程？`)) {
+      return;
+    }
+  }
+
   const payload = Object.fromEntries(form.entries());
+  payload.time = newCourse.time;
+  payload.location = location;
   await addCourse(payload, currentUser.id);
   courseForm.reset();
+  document.getElementById("teacher-schedule-conflict-warning").style.display = "none";
   renderCourses();
+  renderTeacherSchedule();
 });
 
 const renderTasks = () => {
@@ -185,6 +257,62 @@ const renderGrades = async () => {
   );
 };
 
+// 教师课表视图
+const teacherScheduleView = document.getElementById("teacher-schedule-view");
+
+const renderTeacherSchedule = () => {
+  if (!teacherScheduleView) return;
+  const scheduleData = generateWeeklySchedule(currentUser.id, "teacher");
+  const { schedule } = scheduleData;
+
+  let html = `
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+      <thead>
+        <tr>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">时间</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周一</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周二</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周三</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周四</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周五</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  const periodLabels = ["上午第1节", "上午第2节", "下午第1节", "下午第2节", "晚上"];
+  
+  for (let period = 0; period < 5; period++) {
+    html += `<tr>`;
+    html += `<td style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; font-weight: bold;">${periodLabels[period]}</td>`;
+    
+    for (let day = 0; day < 5; day++) {
+      const cellContent = schedule[day][period];
+      html += `<td style="border: 1px solid #ddd; padding: 0.5rem; vertical-align: top; min-height: 80px;">`;
+      
+      if (cellContent && Array.isArray(cellContent) && cellContent.length > 0) {
+        cellContent.forEach(item => {
+          html += `
+            <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #e3f2fd; border-radius: 4px; font-size: 0.9em;">
+              <strong>${item.course.name}</strong><br/>
+              <span class="muted">${item.course.code}</span><br/>
+              <span class="muted">${item.location}</span>
+            </div>
+          `;
+        });
+      } else {
+        html += `<span class="muted" style="font-size: 0.9em;">-</span>`;
+      }
+      
+      html += `</td>`;
+    }
+    html += `</tr>`;
+  }
+
+  html += `</tbody></table>`;
+  teacherScheduleView.innerHTML = html;
+};
+
 const init = async () => {
   currentUser = await requireAuth(["teacher"]);
   if (!currentUser) return;
@@ -192,6 +320,7 @@ const init = async () => {
   setupNav("teacher");
   infoBox.textContent = `${currentUser.name}（${currentUser.username}），邮箱：${currentUser.email}`;
   renderCourses();
+  renderTeacherSchedule();
 };
 
 init();
