@@ -1,10 +1,10 @@
 import { ensureSeeded, getData, saveData, setSessionUser, clearSession, getSessionUser, addLog, findUserByUsername } from "./storage.js";
 import { hashPassword, randomSalt, uuid } from "./utils.js";
 
-const createUser = async ({ username, password, role, name, email, className, major }) => {
+const createUser = async ({ username, password, role, name, email, className, major, mustChangePassword = false }) => {
   const salt = randomSalt();
   const passwordHash = await hashPassword(password, salt);
-  return { id: uuid(), username, role, name, email, salt, passwordHash, className: className || "", major: major || "" };
+  return { id: uuid(), username, role, name, email, salt, passwordHash, className: className || "", major: major || "", mustChangePassword };
 };
 
 export const login = async (username, password) => {
@@ -17,6 +17,22 @@ export const login = async (username, password) => {
   setSessionUser(user.id);
   addLog(user.id, "登录系统", `以角色 ${user.role} 登录`);
   return user;
+};
+
+export const changePassword = async (userId, oldPassword, newPassword) => {
+  await ensureSeeded();
+  const data = getData();
+  const user = data.users.find(u => u.id === userId);
+  if (!user) throw new Error("用户不存在");
+  const hashed = await hashPassword(oldPassword, user.salt);
+  if (hashed !== user.passwordHash) throw new Error("原密码错误");
+  const salt = randomSalt();
+  user.salt = salt;
+  user.passwordHash = await hashPassword(newPassword, salt);
+  user.mustChangePassword = false; // 清除强制修改密码标志
+  saveData(data);
+  addLog(user.id, "修改密码", "用户主动修改密码");
+  return true;
 };
 
 export const register = async ({ username, password, name, email, role = "student", className, major }) => {
@@ -41,6 +57,11 @@ export const requireAuth = async (roles = []) => {
   const user = getSessionUser();
   if (!user) {
     window.location.href = `login.html?redirect=${encodeURIComponent(location.pathname.split("/").pop())}`;
+    return null;
+  }
+  // 检查是否需要强制修改密码（修改密码页面除外）
+  if (user.mustChangePassword && !location.pathname.includes("change-password.html")) {
+    window.location.href = `change-password.html?username=${encodeURIComponent(user.username)}`;
     return null;
   }
   if (roles.length && !roles.includes(user.role)) {

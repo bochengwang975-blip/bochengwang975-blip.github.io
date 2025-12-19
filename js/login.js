@@ -25,6 +25,11 @@ loginForm?.addEventListener("submit", async e => {
   const password = form.get("password").trim();
   try {
     const user = await login(username, password);
+    // 检查是否需要强制修改密码
+    if (user.mustChangePassword) {
+      location.href = `change-password.html?username=${encodeURIComponent(username)}`;
+      return;
+    }
     const redirectParam = new URLSearchParams(location.search).get("redirect");
     const roleTarget = {
       student: "student.html",

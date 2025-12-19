@@ -26,7 +26,8 @@
         </div>
         <div class="card">
           <h3>教务提示</h3>
-          <p class="muted">CSV 格式示例：student_no,name,email,className,major,password</p>
+          <p class="muted">支持导入 XLS/CSV 文件批量初始化学生账号。文件格式：学号(student_no)、姓名(name)、班级(className)。初始密码统一设定，首次登录需修改。</p>
+          <p class="muted">CSV 格式示例：student_no,name,className</p>
         </div>
       </section>
 
@@ -43,10 +44,24 @@
         </div>
 
         <div class="card">
-          <h3>批量导入学生（CSV）</h3>
-          <textarea id="csv-input" rows="8" placeholder="student_no,name,email,className,major,password"></textarea>
-          <button id="import-btn">导入</button>
-          <div id="import-result" class="muted"></div>
+          <h3>批量导入学生账号</h3>
+          <p class="subtitle">支持 XLS/CSV 文件导入，或手动粘贴 CSV 文本</p>
+          <div class="list">
+            <label for="file-input" style="display: block; margin-bottom: 0.5rem;">
+              <strong>选择文件（XLS/CSV）：</strong>
+            </label>
+            <input type="file" id="file-input" accept=".xls,.xlsx,.csv" style="margin-bottom: 1rem;" />
+            <p class="muted" style="margin-bottom: 1rem;">或手动粘贴 CSV 文本：</p>
+            <textarea id="csv-input" rows="6" placeholder="student_no,name,className&#10;2022001,张三,计科22-1&#10;2022002,李四,计科22-1"></textarea>
+            <div style="margin: 1rem 0;">
+              <label for="initial-password" style="display: block; margin-bottom: 0.5rem;">
+                <strong>统一初始密码：</strong>
+              </label>
+              <input type="text" id="initial-password" value="Student123" placeholder="初始密码" style="width: 100%;" />
+            </div>
+            <button id="import-btn">批量导入</button>
+          </div>
+          <div id="import-result" class="muted" style="margin-top: 1rem;"></div>
         </div>
       </section>
 
@@ -84,6 +99,8 @@
 
     <div class="footer">教务端可查看全部成绩并进行审核。</div>
 
+    <!-- SheetJS库用于解析Excel文件 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script type="module" src="js/admin.js"></script>
   </body>
 </html>
