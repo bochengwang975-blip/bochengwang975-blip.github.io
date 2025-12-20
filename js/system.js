@@ -4,6 +4,8 @@ import { setupNav } from "./common.js";
 import { downloadJSON } from "./utils.js";
 
 const logRows = document.getElementById("log-rows");
+const logSearch = document.getElementById("log-search");
+const logSearchResult = document.getElementById("log-search-result");
 const backupBtn = document.getElementById("backup-btn");
 const importFile = document.getElementById("import-file");
 const restoreText = document.getElementById("restore-text");
@@ -15,16 +17,68 @@ const clearLogs1mBtn = document.getElementById("clear-logs-1m");
 const clearLogsAllBtn = document.getElementById("clear-logs-all");
 
 let currentUser = null;
+let searchKeyword = "";
 
-const renderLogs = () => {
+const renderLogs = (keyword = "") => {
   const data = getData();
+  const logs = data.logs || [];
+  searchKeyword = keyword.toLowerCase().trim();
+  
+  // 过滤日志
+  let filteredLogs = logs;
+  if (searchKeyword) {
+    filteredLogs = logs.filter(l => {
+      // 获取用户名称
+      const actor = data.users.find(u => u.id === l.actor);
+      const actorName = actor ? actor.name : l.actor;
+      const actorUsername = actor ? actor.username : "";
+      
+      // 搜索用户名称、用户名、操作类型、详情
+      return (
+        actorName.toLowerCase().includes(searchKeyword) ||
+        actorUsername.toLowerCase().includes(searchKeyword) ||
+        l.action.toLowerCase().includes(searchKeyword) ||
+        (l.details && l.details.toLowerCase().includes(searchKeyword)) ||
+        (l.at && l.at.toLowerCase().includes(searchKeyword))
+      );
+    });
+  }
+  
+  // 渲染日志
   logRows.innerHTML = "";
-  data.logs.forEach(l => {
-    const tr = document.createElement("tr");
-    const actor = data.users.find(u => u.id === l.actor)?.name || l.actor;
-    tr.innerHTML = `<td>${l.at}</td><td>${actor}</td><td>${l.action}</td><td class="muted">${l.details}</td>`;
-    logRows.appendChild(tr);
-  });
+  if (filteredLogs.length === 0) {
+    logRows.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 1rem;" class="muted">${searchKeyword ? "未找到匹配的日志记录" : "暂无日志记录"}</td></tr>`;
+  } else {
+    filteredLogs.forEach(l => {
+      const tr = document.createElement("tr");
+      const actor = data.users.find(u => u.id === l.actor);
+      const actorName = actor ? actor.name : l.actor;
+      
+      // 高亮搜索关键词
+      const highlightText = (text, keyword) => {
+        if (!keyword || !text) return text;
+        const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+      };
+      
+      tr.innerHTML = `
+        <td>${highlightText(l.at, searchKeyword)}</td>
+        <td>${highlightText(actorName, searchKeyword)}</td>
+        <td>${highlightText(l.action, searchKeyword)}</td>
+        <td class="muted">${highlightText(l.details || "", searchKeyword)}</td>
+      `;
+      logRows.appendChild(tr);
+    });
+  }
+  
+  // 显示搜索结果统计
+  if (searchKeyword) {
+    logSearchResult.textContent = `找到 ${filteredLogs.length} 条匹配记录（共 ${logs.length} 条）`;
+    logSearchResult.style.display = "block";
+  } else {
+    logSearchResult.textContent = `共 ${logs.length} 条日志记录`;
+    logSearchResult.style.display = logs.length > 0 ? "block" : "none";
+  }
 };
 
 backupBtn?.addEventListener("click", () => {
@@ -81,6 +135,11 @@ clearLogs24hBtn?.addEventListener("click", () => handleClearLogs("24h", "最近2
 clearLogs1wBtn?.addEventListener("click", () => handleClearLogs("1w", "最近一周"));
 clearLogs1mBtn?.addEventListener("click", () => handleClearLogs("1m", "最近一个月"));
 clearLogsAllBtn?.addEventListener("click", () => handleClearLogs("all", "全部"));
+
+// 搜索日志
+logSearch?.addEventListener("input", (e) => {
+  renderLogs(e.target.value);
+});
 
 const init = async () => {
   currentUser = await requireAuth(["system"]);

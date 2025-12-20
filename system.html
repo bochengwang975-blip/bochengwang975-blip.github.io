@@ -34,11 +34,19 @@
         <div class="card">
           <h3>操作日志</h3>
           <div style="margin-bottom: 1rem;">
-            <button id="clear-logs-1h" class="mini" style="margin-right: 0.5rem;">清空最近1小时</button>
-            <button id="clear-logs-24h" class="mini" style="margin-right: 0.5rem;">清空最近24小时</button>
-            <button id="clear-logs-1w" class="mini" style="margin-right: 0.5rem;">清空最近一周</button>
-            <button id="clear-logs-1m" class="mini" style="margin-right: 0.5rem;">清空最近一个月</button>
-            <button id="clear-logs-all" class="mini" style="color: rgb(255, 255, 255);">清空全部</button>
+            <input 
+              type="text" 
+              id="log-search" 
+              placeholder="搜索日志（用户、操作、详情）" 
+              style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+            />
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <button id="clear-logs-1h" class="mini">清空最近1小时</button>
+              <button id="clear-logs-24h" class="mini">清空最近24小时</button>
+              <button id="clear-logs-1w" class="mini">清空最近一周</button>
+              <button id="clear-logs-1m" class="mini">清空最近一个月</button>
+              <button id="clear-logs-all" class="mini" style="color: rgb(255, 255, 255);">清空全部</button>
+            </div>
           </div>
           <div class="scroll">
             <table>
@@ -53,6 +61,7 @@
               <tbody id="log-rows"></tbody>
             </table>
           </div>
+          <div id="log-search-result" style="margin-top: 0.5rem; color: #666; font-size: 0.9em;"></div>
         </div>
 
         <div class="card">
