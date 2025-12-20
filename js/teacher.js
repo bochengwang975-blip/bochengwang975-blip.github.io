@@ -27,10 +27,21 @@ const previewModal = document.getElementById("preview-modal");
 const editModal = document.getElementById("edit-modal");
 const draftMsg = document.getElementById("draft-msg");
 
+// 新增引用
+const gradingModal = document.getElementById("grading-modal");
+const gradeStudentName = document.getElementById("grade-student-name");
+const gradeTaskTitle = document.getElementById("grade-task-title");
+const gradeSubmissionContent = document.getElementById("grade-submission-content");
+const gradeSubmitTime = document.getElementById("grade-submit-time");
+const gradeScoreInput = document.getElementById("grade-score-input");
+const btnConfirmGrade = document.getElementById("btn-confirm-grade");
+
 let currentUser = null;
 let currentCourseId = null;
+// 暂存当前正在批改的记录信息
+let currentGradingInfo = null;
 
-// 草稿箱
+// --- 草稿箱功能 ---
 const DRAFT_KEY = "teacher_course_draft";
 
 const saveDraft = () => {
@@ -58,6 +69,7 @@ const clearDraft = () => {
 };
 
 courseForm.addEventListener("input", saveDraft);
+// --- 草稿箱结束 ---
 
 const renderCourses = () => {
   const data = getData();
@@ -341,6 +353,7 @@ taskForm?.addEventListener("submit", async e => {
   renderGrades();
 });
 
+// --- 渲染成绩列表 (Modified) ---
 const renderGrades = async () => {
   const data = getData();
   const courseId = gradeSelect.value;
@@ -352,36 +365,53 @@ const renderGrades = async () => {
   enrollments.forEach(e => {
     const student = data.users.find(u => u.id === e.studentId);
 
+    // 生成任务列表 HTML
     const taskDetails = e.tasks.map(t => {
         const taskDef = course.tasks.find(ct => ct.id === t.taskId);
+
         let statusIcon = "⏳";
-        let statusColor = "#666";
         let statusBg = "#f0f0f0";
+        let statusText = t.status;
+        let actionBtn = "";
 
         if (t.status === "已评分") {
             statusIcon = "✅";
-            statusColor = "#2c8f5f";
             statusBg = "rgba(44, 143, 95, 0.1)";
+            // 已评分：显示分数，并允许再次批阅修改
+            actionBtn = `
+                <div style="font-weight:bold; color:#2c8f5f; margin-right:8px;">${t.score} 分</div>
+                <button class="mini secondary" style="padding:2px 6px;"
+                    data-grade-action="review"
+                    data-enroll-id="${e.id}"
+                    data-task-id="${t.taskId}"
+                    data-student-name="${student?.name}">修改</button>
+            `;
         } else if (t.status === "已提交") {
             statusIcon = "📄";
-            statusColor = "#b8831d";
             statusBg = "rgba(184, 131, 29, 0.1)";
+            // 已提交：显示批阅按钮
+            actionBtn = `
+                <button class="mini" style="background:var(--accent); color:white; padding:4px 10px;"
+                    data-grade-action="grade"
+                    data-enroll-id="${e.id}"
+                    data-task-id="${t.taskId}"
+                    data-student-name="${student?.name}">批阅</button>
+            `;
+        } else {
+            // 未提交/未开始/待提交
+            actionBtn = `<span class="muted" style="font-size:12px;">待提交</span>`;
         }
 
         return `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:8px 10px; background:#fff; border:1px solid #eee; border-radius:8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                <div style="flex:1; overflow:hidden; padding-right:10px;">
-                    <div style="font-weight:600; font-size:13px; color:#333; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${taskDef?.title || "未知任务"}</div>
-                    <div style="display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:2px 6px; border-radius:4px; background:${statusBg}; color:${statusColor};">
-                        ${statusIcon} ${t.status}
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:8px 10px; background:#fff; border:1px solid #eee; border-radius:8px;">
+                <div style="flex:1;">
+                    <div style="font-weight:600; font-size:13px; color:#333;">${taskDef?.title || "未知任务"}</div>
+                    <div style="font-size:11px; color:#666; display:flex; align-items:center; margin-top:2px;">
+                        <span style="background:${statusBg}; padding:1px 5px; border-radius:3px; margin-right:5px;">${statusIcon} ${statusText}</span>
                     </div>
                 </div>
-                <div style="flex-shrink:0;">
-                    <input type="number" value="${t.score ?? ''}" placeholder="-"
-                        style="width:50px; padding:6px; border:1px solid #ddd; border-radius:6px; text-align:center; font-weight:bold; color:var(--accent); outline:none; transition:border 0.2s;"
-                        onfocus="this.style.borderColor='var(--accent)'"
-                        onblur="this.style.borderColor='#ddd'"
-                        data-task-id="${t.taskId}" data-enroll-id="${e.id}">
+                <div style="display:flex; align-items:center;">
+                    ${actionBtn}
                 </div>
             </div>
         `;
@@ -399,8 +429,7 @@ const renderGrades = async () => {
 
       <td style="vertical-align: top; padding: 10px;">
         <div style="background: rgba(139, 21, 55, 0.03); padding: 10px; border-radius: 10px; border: 1px solid rgba(139, 21, 55, 0.05);">
-            ${taskDetails || "<div class='muted' style='text-align:center; padding:10px;'>暂无任务</div>"}
-            <button class="mini secondary" style="width:100%; margin-top:8px; background:#fff; border:1px solid #eee; color:var(--accent);" data-save-all="${e.id}">💾 批量保存分数</button>
+            ${taskDetails || "<div class='muted'>暂无任务</div>"}
         </div>
       </td>
 
@@ -408,12 +437,12 @@ const renderGrades = async () => {
         <div style="display:flex; flex-direction:column; gap:10px;">
             <div>
                 <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:4px;">期末总评</label>
-                <input type="number" min="0" max="100" data-final="${e.id}" value="${e.finalGrade||''}" placeholder="0-100"
+                <input type="number" min="0" max="100" data-final="${e.id}" value="${e.finalGrade||''}" placeholder="-"
                     style="width: 100%; font-size:16px; font-weight:bold; color:var(--accent); text-align:center; padding:8px;" />
             </div>
             <button class="mini" data-publish="${e.id}" style="width:100%; padding:8px;">${e.published ? "更新发布" : "发布成绩"}</button>
             <div style="font-size:11px; color:${e.published ? '#2c8f5f' : '#999'}; text-align:center;">
-                ${e.published ? "✅ 已同步给学生" : "🔒 仅教师可见"}
+                ${e.published ? "✅ 已同步" : "🔒 未发布"}
             </div>
         </div>
       </td>
@@ -421,28 +450,15 @@ const renderGrades = async () => {
     gradeRows.appendChild(tr);
   });
 
-  gradeRows.querySelectorAll("[data-save-all]").forEach(btn =>
-    btn.addEventListener("click", async () => {
-        const enrollId = btn.dataset.saveAll;
-        const inputs = gradeRows.querySelectorAll(`input[data-enroll-id='${enrollId}']`);
-        let hasValue = false;
-
-        for (const input of inputs) {
-            const taskId = input.dataset.taskId;
-            const score = input.value;
-            if (score !== "") {
-                hasValue = true;
-                await recordTaskScore(courseId, enrollments.find(e=>e.id===enrollId).studentId, taskId, score, currentUser.id);
-            }
-        }
-        if(hasValue) {
-            alert("分数已保存");
-            renderGrades();
-        } else {
-            alert("请先输入分数");
-        }
-    })
-  );
+  // 绑定批阅/修改按钮点击事件
+  gradeRows.querySelectorAll("[data-grade-action]").forEach(btn => {
+      btn.addEventListener("click", () => {
+          const enrollId = btn.dataset.enrollId;
+          const taskId = btn.dataset.taskId;
+          const studentName = btn.dataset.studentName;
+          openGradingModal(enrollId, taskId, studentName);
+      });
+  });
 
   gradeRows.querySelectorAll("[data-publish]").forEach(btn =>
     btn.addEventListener("click", async () => {
@@ -456,6 +472,57 @@ const renderGrades = async () => {
   );
 };
 
+// --- 批改模态框逻辑 ---
+const openGradingModal = async (enrollId, taskId, studentName) => {
+    const data = getData();
+    const course = data.courses.find(c => c.id === currentCourseId);
+    const taskDef = course.tasks.find(t => t.id === taskId);
+    const enrollment = data.enrollments.find(e => e.id === enrollId);
+    const taskRecord = enrollment.tasks.find(t => t.taskId === taskId);
+
+    // 保存当前操作状态
+    currentGradingInfo = { courseId: currentCourseId, studentId: enrollment.studentId, taskId: taskId };
+
+    // 填充UI
+    gradeStudentName.textContent = `学生：${studentName}`;
+    gradeTaskTitle.textContent = `任务：${taskDef.title}`;
+    gradeScoreInput.value = taskRecord.score || "";
+
+    // 模拟学生提交的内容 (因为数据库中没有 content 字段)
+    const isImage = Math.random() > 0.5;
+    const submitContent = isImage
+        ? `<div style="text-align:center;"><img src="https://via.placeholder.com/400x200?text=Student+Submission" style="max-width:100%; border-radius:4px;"><p>附件：layout_final.jpg</p></div>`
+        : `<p>这是学生提交的作业文本内容。我已经完成了网页布局的要求，使用了 Flexbox 和 Grid，并适配了移动端。</p><p>GitHub 链接：<a href="#">https://github.com/student/repo</a></p>`;
+
+    gradeSubmissionContent.innerHTML = submitContent;
+    gradeSubmitTime.textContent = new Date().toLocaleString(); // 模拟时间
+
+    gradingModal.classList.remove("hidden");
+};
+
+// 确认评分
+btnConfirmGrade.addEventListener("click", async () => {
+    if (!currentGradingInfo) return;
+    const score = gradeScoreInput.value;
+
+    if (score === "" || score < 0 || score > 100) {
+        return alert("请输入有效的 0-100 分数");
+    }
+
+    await recordTaskScore(
+        currentGradingInfo.courseId,
+        currentGradingInfo.studentId,
+        currentGradingInfo.taskId,
+        score,
+        currentUser.id
+    );
+
+    gradingModal.classList.add("hidden");
+    currentGradingInfo = null;
+    renderGrades(); // 刷新列表
+});
+
+// --- 原有的课表渲染逻辑 ---
 const renderTeacherSchedule = () => {
   if (!document.getElementById("teacher-schedule-view")) return;
   const scheduleData = generateWeeklySchedule(currentUser.id, "teacher");
