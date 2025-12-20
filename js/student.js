@@ -182,7 +182,10 @@ const renderDetail = courseId => {
       const enroll = data.enrollments.find(e => e.courseId === courseId && e.studentId === currentUser.id);
       enroll.tasks = enroll.tasks.map(t => (t.taskId === taskId ? { ...t, status: "已提交" } : t));
       saveData(data);
-      addLog(currentUser.id, "提交任务", `课程 ${course.name} 任务 ${taskId} 标记已提交`);
+      // 获取任务名称
+      const task = course.tasks.find(t => t.id === taskId);
+      const taskName = task ? task.title : taskId;
+      addLog(currentUser.id, "提交任务", `课程 ${course.name} 任务 ${taskName} 标记已提交`);
       renderDetail(courseId);
       renderMyCourses();
     })
