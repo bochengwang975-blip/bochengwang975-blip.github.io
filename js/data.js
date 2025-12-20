@@ -39,7 +39,7 @@ export const seedData = async () => {
       location: "A402",
       summary: "HTML5 + CSS3 + JS 现代前端实战，结合本地存储完成课程与成绩管理小型系统。",
       tags: ["前端", "项目制", "实战"],
-      banner: "images/banner_web.jpg",
+      banner: "images/banner_web1.jpg",
       materials: [
         { id: uuid(), title: "课程大纲", type: "doc", url: "#", desc: "PDF 大纲示例", date: "2025/12/01" },
         { id: uuid(), title: "示例视频", type: "video", url: "#", desc: "15 分钟演示", date: "2025/12/05" }
@@ -62,7 +62,7 @@ export const seedData = async () => {
       location: "B202",
       summary: "链表、树、图及算法复杂度分析，含课程实验与阶段测验。",
       tags: ["算法", "核心必修"],
-      banner: "images/banner_data.png",
+      banner: "images/banner_ds.jpg",
       materials: [{ id: uuid(), title: "实验指导书", type: "doc", url: "#", desc: "实验 1-6 文档", date: "2025/12/10" }],
       tasks: [
         { id: uuid(), title: "实验 1：线性表", type: "assignment", due: "2025-12-30", weight: 0.2, description: "实现顺序表与链表增删查改。" },
@@ -79,7 +79,6 @@ export const seedData = async () => {
       studentId: student.id,
       progress: 1,
       tasks: [
-        // 预设已完成状态，方便测试
         { taskId: courses[0].tasks[0].id, score: 90, status: "已评分" },
         { taskId: courses[0].tasks[1].id, score: 95, status: "已评分" },
         { taskId: courses[0].tasks[2].id, score: 88, status: "已评分" }
