@@ -38,10 +38,9 @@ const btnConfirmGrade = document.getElementById("btn-confirm-grade");
 
 let currentUser = null;
 let currentCourseId = null;
-// 暂存当前正在批改的记录信息
 let currentGradingInfo = null;
 
-// --- 草稿箱功能 ---
+// 草稿箱功能
 const DRAFT_KEY = "teacher_course_draft";
 
 const saveDraft = () => {
@@ -69,7 +68,6 @@ const clearDraft = () => {
 };
 
 courseForm.addEventListener("input", saveDraft);
-// --- 草稿箱结束 ---
 
 const renderCourses = () => {
   const data = getData();
@@ -353,7 +351,6 @@ taskForm?.addEventListener("submit", async e => {
   renderGrades();
 });
 
-// --- 渲染成绩列表 (Modified) ---
 const renderGrades = async () => {
   const data = getData();
   const courseId = gradeSelect.value;
@@ -365,7 +362,6 @@ const renderGrades = async () => {
   enrollments.forEach(e => {
     const student = data.users.find(u => u.id === e.studentId);
 
-    // 生成任务列表 HTML
     const taskDetails = e.tasks.map(t => {
         const taskDef = course.tasks.find(ct => ct.id === t.taskId);
 
@@ -377,7 +373,6 @@ const renderGrades = async () => {
         if (t.status === "已评分") {
             statusIcon = "✅";
             statusBg = "rgba(44, 143, 95, 0.1)";
-            // 已评分：显示分数，并允许再次批阅修改
             actionBtn = `
                 <div style="font-weight:bold; color:#2c8f5f; margin-right:8px;">${t.score} 分</div>
                 <button class="mini secondary" style="padding:2px 6px;"
@@ -389,7 +384,6 @@ const renderGrades = async () => {
         } else if (t.status === "已提交") {
             statusIcon = "📄";
             statusBg = "rgba(184, 131, 29, 0.1)";
-            // 已提交：显示批阅按钮
             actionBtn = `
                 <button class="mini" style="background:var(--accent); color:white; padding:4px 10px;"
                     data-grade-action="grade"
@@ -398,7 +392,6 @@ const renderGrades = async () => {
                     data-student-name="${student?.name}">批阅</button>
             `;
         } else {
-            // 未提交/未开始/待提交
             actionBtn = `<span class="muted" style="font-size:12px;">待提交</span>`;
         }
 
@@ -450,7 +443,6 @@ const renderGrades = async () => {
     gradeRows.appendChild(tr);
   });
 
-  // 绑定批阅/修改按钮点击事件
   gradeRows.querySelectorAll("[data-grade-action]").forEach(btn => {
       btn.addEventListener("click", () => {
           const enrollId = btn.dataset.enrollId;
@@ -472,7 +464,6 @@ const renderGrades = async () => {
   );
 };
 
-// --- 批改模态框逻辑 ---
 const openGradingModal = async (enrollId, taskId, studentName) => {
     const data = getData();
     const course = data.courses.find(c => c.id === currentCourseId);
@@ -480,19 +471,14 @@ const openGradingModal = async (enrollId, taskId, studentName) => {
     const enrollment = data.enrollments.find(e => e.id === enrollId);
     const taskRecord = enrollment.tasks.find(t => t.taskId === taskId);
 
-    // 保存当前操作状态
     currentGradingInfo = { courseId: currentCourseId, studentId: enrollment.studentId, taskId: taskId };
 
-    // 填充UI
     gradeStudentName.textContent = `学生：${studentName}`;
     gradeTaskTitle.textContent = `任务：${taskDef.title}`;
     gradeScoreInput.value = taskRecord.score || "";
 
-    // 模拟学生提交的内容 (因为数据库中没有 content 字段)
     const isImage = Math.random() > 0.5;
-    const submitContent = isImage
-        ? `<div style="text-align:center;"><img src="https://via.placeholder.com/400x200?text=Student+Submission" style="max-width:100%; border-radius:4px;"><p>附件：layout_final.jpg</p></div>`
-        : `<p>这是学生提交的作业文本内容。我已经完成了网页布局的要求，使用了 Flexbox 和 Grid，并适配了移动端。</p><p>GitHub 链接：<a href="#">https://github.com/student/repo</a></p>`;
+    const submitContent = `<p>这是学生提交的作业文本内容。</p><p>GitHub 链接：<a href="#">https://github.com/student/repo</a></p>`;
 
     gradeSubmissionContent.innerHTML = submitContent;
     gradeSubmitTime.textContent = new Date().toLocaleString(); // 模拟时间
@@ -500,7 +486,6 @@ const openGradingModal = async (enrollId, taskId, studentName) => {
     gradingModal.classList.remove("hidden");
 };
 
-// 确认评分
 btnConfirmGrade.addEventListener("click", async () => {
     if (!currentGradingInfo) return;
     const score = gradeScoreInput.value;
@@ -519,10 +504,9 @@ btnConfirmGrade.addEventListener("click", async () => {
 
     gradingModal.classList.add("hidden");
     currentGradingInfo = null;
-    renderGrades(); // 刷新列表
+    renderGrades();
 });
 
-// --- 原有的课表渲染逻辑 ---
 const renderTeacherSchedule = () => {
   if (!document.getElementById("teacher-schedule-view")) return;
   const scheduleData = generateWeeklySchedule(currentUser.id, "teacher");
