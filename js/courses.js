@@ -16,21 +16,19 @@ export const addCourse = async (course, teacherId) => {
   await ensureSeeded();
   const data = getData();
   const id = uuid();
-  // 支持单个teacherId或teacherIds数组
   const teacherIds = course.teacherIds || (teacherId ? [teacherId] : []);
-  
-  // 处理时间和地点
+
   let time = null;
   let location = "";
-  
+
   if (course.time && course.time.day && course.time.period) {
     time = { day: parseInt(course.time.day), period: parseInt(course.time.period) };
   }
-  
+
   if (course.location) {
     location = course.location.trim();
   }
-  
+
   data.courses.push({
     id,
     code: course.code || `NEW-${Math.floor(Math.random() * 999)}`,
@@ -43,12 +41,67 @@ export const addCourse = async (course, teacherId) => {
     location,
     summary: course.summary || "",
     tags: course.tags || [],
-    materials: course.materials || [],
+    materials: course.materials || [], // 初始化课件资料
     tasks: course.tasks || []
   });
   saveData(data);
   addLog(teacherId || teacherIds[0], "创建课程", `新增课程 ${course.name}`);
   return id;
+};
+
+// 修改课程信息
+export const updateCourse = async (courseId, updates) => {
+    await ensureSeeded();
+    const data = getData();
+    const courseIndex = data.courses.findIndex(c => c.id === courseId);
+    if (courseIndex === -1) throw new Error("课程不存在");
+
+    const course = data.courses[courseIndex];
+    const updatedCourse = { ...course, ...updates };
+    delete updatedCourse.id;
+
+    data.courses[courseIndex] = updatedCourse;
+    saveData(data);
+    return updatedCourse;
+};
+
+// 删除课程
+export const deleteCourse = async (courseId, actorId) => {
+    await ensureSeeded();
+    const data = getData();
+    const courseIndex = data.courses.findIndex(c => c.id === courseId);
+    if (courseIndex === -1) throw new Error("课程不存在");
+
+    const name = data.courses[courseIndex].name;
+    data.courses.splice(courseIndex, 1);
+    data.enrollments = data.enrollments.filter(e => e.courseId !== courseId);
+
+    saveData(data);
+    addLog(actorId, "删除课程", `删除了课程 ${name} 及所有相关记录`);
+};
+
+// 上传课件资料
+export const addCourseMaterial = async (courseId, file, actorId) => {
+    await ensureSeeded();
+    const data = getData();
+    const course = data.courses.find(c => c.id === courseId);
+    if (!course) throw new Error("课程不存在");
+
+    if (!course.materials) course.materials = [];
+
+    const material = {
+        id: uuid(),
+        title: file.name,
+        type: file.type,
+        size: file.size,
+        url: URL.createObjectURL(file),
+        date: new Date().toLocaleDateString()
+    };
+
+    course.materials.push(material);
+    saveData(data);
+    addLog(actorId, "上传资料", `上传了课件 ${file.name}`);
+    return material;
 };
 
 export const addTaskToCourse = async (courseId, task, actorId) => {
@@ -117,7 +170,7 @@ export const publishFinalGrade = async (courseId, studentId, grade, actorId) => 
   const enrollment = data.enrollments.find(e => e.courseId === courseId && e.studentId === studentId);
   if (!enrollment) throw new Error("未找到选课记录");
   enrollment.finalGrade = Number(grade);
-  enrollment.published = false; // 教师录入成绩后，需要管理员审核才能发布
+  enrollment.published = false;
   saveData(data);
   // 获取课程名称和学生名称
   const course = data.courses.find(c => c.id === courseId);
