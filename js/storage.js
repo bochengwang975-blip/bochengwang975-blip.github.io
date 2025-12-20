@@ -129,7 +129,7 @@ export const backupData = () => getData();
 
 export const restoreData = obj => {
   saveData(obj);
-  addLog("system", "恢复数据", "通过前端导入 JSON 备份恢复。");
+  addLog("系统管理员", "恢复数据", "通过前端导入 JSON 备份恢复。");
 };
 
 // 自动备份相关功能

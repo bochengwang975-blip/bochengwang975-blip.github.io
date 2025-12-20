@@ -1,7 +1,7 @@
 import { requireAuth } from "./auth.js";
 import { ensureSeeded, getData, backupData, restoreData, addLog, getSessionUser, clearLogs, getAutoBackupInfo, getAutoBackup, performAutoBackup } from "./storage.js";
 import { setupNav } from "./common.js";
-import { downloadJSON } from "./utils.js";
+import { downloadJSON, hashPassword } from "./utils.js";
 
 const logRows = document.getElementById("log-rows");
 const logSearch = document.getElementById("log-search");
@@ -141,15 +141,62 @@ downloadAutoBackupBtn?.addEventListener("click", () => {
   renderLogs();
 });
 
-importFile?.addEventListener("change", e => {
+// 验证系统管理员密码
+const verifySystemAdminPassword = async () => {
+  const password = prompt("⚠️ 数据恢复属于高危操作，请输入系统管理员密码进行确认：\n\n此操作将覆盖所有现有数据，请谨慎操作！");
+  
+  if (password === null) {
+    // 用户取消
+    return false;
+  }
+  
+  if (!password) {
+    alert("密码不能为空");
+    return false;
+  }
+  
+  try {
+    const data = getData();
+    // 查找系统管理员用户
+    const systemAdmin = data.users.find(u => u.role === "system");
+    if (!systemAdmin) {
+      alert("未找到系统管理员账户");
+      return false;
+    }
+    
+    // 验证密码
+    const hashed = await hashPassword(password, systemAdmin.salt);
+    if (hashed !== systemAdmin.passwordHash) {
+      alert("密码错误，恢复操作已取消");
+      addLog(currentUser.id, "恢复数据失败", "密码验证失败，恢复操作已取消");
+      return false;
+    }
+    
+    return true;
+  } catch (err) {
+    alert("验证过程中出现错误：" + err.message);
+    return false;
+  }
+};
+
+importFile?.addEventListener("change", async e => {
   const file = e.target.files?.[0];
   if (!file) return;
+  
+  // 先验证密码
+  const verified = await verifySystemAdminPassword();
+  if (!verified) {
+    // 清空文件选择
+    e.target.value = "";
+    return;
+  }
+  
   const reader = new FileReader();
   reader.onload = () => {
     try {
       const obj = JSON.parse(reader.result);
       restoreData(obj);
-      addLog(currentUser.id, "导入备份", `从文件 ${file.name} 恢复`);
+      addLog(currentUser.id, "导入备份", `从文件 ${file.name} 恢复（已通过密码验证）`);
       renderLogs();
       renderBackupStatus();
       alert("数据已恢复");
@@ -160,16 +207,22 @@ importFile?.addEventListener("change", e => {
   reader.readAsText(file);
 });
 
-restoreBtn?.addEventListener("click", () => {
+restoreBtn?.addEventListener("click", async () => {
+  // 先验证密码
+  const verified = await verifySystemAdminPassword();
+  if (!verified) {
+    return;
+  }
+  
   try {
     const obj = JSON.parse(restoreText.value);
     restoreData(obj);
-    addLog(currentUser.id, "粘贴恢复", "通过文本恢复数据");
+    addLog(currentUser.id, "粘贴恢复", "通过文本恢复数据（已通过密码验证）");
     renderLogs();
     renderBackupStatus();
     alert("数据已恢复");
   } catch (err) {
-    alert("JSON 格式不正确");
+    alert("JSON 格式不正确：" + err.message);
   }
 });
 
