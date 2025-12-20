@@ -30,6 +30,7 @@
         </div>
       </section>
 
+      <!-- 课程详情与资料管理区域 -->
       <section id="course-manage-section" class="card hidden" style="margin-bottom: 20px; border-left: 5px solid var(--accent);">
         <div class="flex-between">
             <h3>当前管理课程：<span id="manage-title"></span></h3>
@@ -126,19 +127,20 @@
           <div id="task-list" class="list"></div>
         </div>
 
+        <!-- 成绩与批改部分 -->
         <div class="card">
           <div class="flex-between">
             <div>
               <h3>成绩与批改</h3>
-              <p class="subtitle">查看完成情况并录入成绩。</p>
+              <p class="subtitle">点击“批阅”查看详情并打分。</p>
             </div>
             <select id="grade-course"></select>
           </div>
           <div class="scroll" style="max-height: 500px;">
             <table style="width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0;">
               <colgroup>
-                <col style="width: 22%;">
-                <col style="width: 58%;">
+                <col style="width: 20%;">
+                <col style="width: 60%;">
                 <col style="width: 20%;">
               </colgroup>
               <thead>
@@ -155,6 +157,7 @@
       </section>
     </main>
 
+    <!-- 模态框：预览 -->
     <div id="preview-modal" class="modal-overlay hidden">
         <div class="modal card">
             <h3>课程创建预览</h3>
@@ -166,6 +169,7 @@
         </div>
     </div>
 
+    <!-- 模态框：编辑课程 -->
     <div id="edit-modal" class="modal-overlay hidden">
         <div class="modal card">
             <h3>编辑课程信息</h3>
@@ -183,6 +187,43 @@
                 </div>
             </form>
         </div>
+    </div>
+
+    <!-- 新增：作业批改模态框 -->
+    <div id="grading-modal" class="modal-overlay hidden">
+      <div class="modal card" style="max-width: 600px;">
+          <div class="flex-between">
+            <h3>作业/考试批阅</h3>
+            <button class="mini secondary" onclick="document.getElementById('grading-modal').classList.add('hidden')">✕</button>
+          </div>
+
+          <div style="margin: 15px 0;">
+            <div class="flex-between muted" style="font-size: 0.9em; margin-bottom: 10px;">
+              <span id="grade-student-name">学生：-</span>
+              <span id="grade-task-title">任务：-</span>
+            </div>
+
+            <!-- 模拟的学生提交内容展示区 -->
+            <div class="highlight" style="background: #fdfaf3; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <h4 style="margin:0 0 10px 0; font-size:14px; color:var(--accent);">📄 学生提交内容 / 答卷：</h4>
+              <div id="grade-submission-content" style="font-size: 14px; line-height: 1.6; color: #333; min-height: 80px;">
+                <!-- JS填充内容 -->
+              </div>
+              <div style="margin-top:10px; font-size:12px; color:var(--muted); text-align:right;">
+                提交时间：<span id="grade-submit-time"></span>
+              </div>
+            </div>
+
+            <!-- 评分区 -->
+            <div class="list-item" style="background: #fff; border: 1px solid var(--accent); display:flex; align-items:center; justify-content:space-between;">
+              <label style="font-weight:bold;">评分 (0-100)：</label>
+              <div class="flex">
+                <input type="number" id="grade-score-input" min="0" max="100" style="width: 80px; font-size: 16px; font-weight:bold; text-align:center;">
+                <button id="btn-confirm-grade">确认评分</button>
+              </div>
+            </div>
+          </div>
+      </div>
     </div>
 
     <div class="footer">发布前可修改任务，已发布成绩会同步到学生端。</div>
