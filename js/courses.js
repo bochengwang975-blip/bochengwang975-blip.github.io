@@ -56,8 +56,11 @@ export const updateCourse = async (courseId, updates) => {
     if (courseIndex === -1) throw new Error("课程不存在");
 
     const course = data.courses[courseIndex];
-    const updatedCourse = { ...course, ...updates };
-    delete updatedCourse.id;
+
+    const { id, ...safeUpdates } = updates;
+
+    const updatedCourse = { ...course, ...safeUpdates };
+    updatedCourse.id = courseId;
 
     data.courses[courseIndex] = updatedCourse;
     saveData(data);

@@ -21,7 +21,7 @@ const taskSelect = document.getElementById("task-course");
 const gradeSelect = document.getElementById("grade-course");
 const taskList = document.getElementById("task-list");
 const gradeRows = document.getElementById("grade-rows");
-const infoBox = document.getElementById("teacher-info");
+const headerUserName = document.getElementById("header-user-name"); // 修改了 header 显示位置
 
 const manageSection = document.getElementById("course-manage-section");
 const previewModal = document.getElementById("preview-modal");
@@ -41,9 +41,42 @@ const fileInputImport = document.getElementById("excel-import-input");
 const btnTriggerImport = document.getElementById("btn-trigger-import");
 const importStatus = document.getElementById("import-status");
 
+const navButtons = document.querySelectorAll(".nav-btn");
+const moduleViews = document.querySelectorAll(".module-view");
+
 let currentUser = null;
 let currentCourseId = null;
 let currentGradingInfo = null;
+
+const initNavigation = () => {
+    navButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const targetId = btn.dataset.target;
+
+            navButtons.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+
+            moduleViews.forEach(view => {
+                view.classList.remove("active");
+                if (view.id === targetId) {
+                    view.classList.add("active");
+                }
+            });
+
+            if (targetId === 'module-tasks') {
+                renderCourseSelects();
+                renderTasks();
+            } else if (targetId === 'module-grades') {
+                renderCourseSelects();
+                renderGrades();
+            } else if (targetId === 'module-courses') {
+                renderCourses();
+            } else if (targetId === 'module-schedule') {
+                renderTeacherSchedule();
+            }
+        });
+    });
+};
 
 const DRAFT_KEY = "teacher_course_draft";
 const saveDraft = () => {
@@ -97,17 +130,14 @@ const renderCourses = () => {
     `;
     courseList.appendChild(item);
   });
-  const first = courses[0];
-  if (first && !currentCourseId) currentCourseId = first.id;
+
+  if (courses.length > 0 && !currentCourseId) currentCourseId = courses[0].id;
+
   bindCourseButtons();
   renderCourseSelects();
-  renderTasks();
-  renderGrades();
 
   if (currentCourseId) {
     renderCourseManager(currentCourseId);
-  } else {
-    manageSection.classList.add("hidden");
   }
 };
 
@@ -115,10 +145,14 @@ const bindCourseButtons = () => {
   courseList.querySelectorAll("[data-choose]").forEach(btn =>
     btn.addEventListener("click", () => {
       currentCourseId = btn.dataset.choose;
-      renderCourseSelects();
+
+      document.querySelector('[data-target="module-courses"]').click();
+
       renderCourseManager(currentCourseId);
-      renderTasks();
-      renderGrades();
+
+      renderCourseSelects();
+
+      manageSection.classList.remove("hidden");
       manageSection.scrollIntoView({ behavior: 'smooth' });
     })
   );
@@ -197,6 +231,7 @@ document.getElementById("edit-form").addEventListener("submit", async (e) => {
     await updateCourse(id, updates);
     editModal.classList.add("hidden");
     renderCourses();
+    renderCourseManager(id);
     renderTeacherSchedule();
 });
 
@@ -206,16 +241,19 @@ const renderCourseSelects = () => {
     const teacherIds = c.teacherIds || (c.teacherId ? [c.teacherId] : []);
     return teacherIds.includes(currentUser.id);
   });
+
   [taskSelect, gradeSelect].forEach(select => {
+    const currentVal = select.value || currentCourseId;
     select.innerHTML = "";
     courses.forEach(c => {
       const opt = document.createElement("option");
       opt.value = c.id;
       opt.textContent = c.name;
-      if (c.id === currentCourseId) opt.selected = true;
+      if (c.id === currentVal) opt.selected = true;
       select.appendChild(opt);
     });
   });
+
   if (courses.length && (!currentCourseId || !courses.find(c=>c.id === currentCourseId))) {
       currentCourseId = courses[0].id;
   }
@@ -306,13 +344,15 @@ courseForm?.addEventListener("submit", async e => {
   clearDraft();
   courseForm.reset();
   document.getElementById("teacher-schedule-conflict-warning").style.display = "none";
-  renderCourses();
-  renderTeacherSchedule();
+  alert("课程创建成功！");
+
+  document.querySelector('[data-target="module-courses"]').click();
 });
 
 const renderTasks = () => {
   const data = getData();
-  const course = data.courses.find(c => c.id === taskSelect.value);
+  const courseId = taskSelect.value;
+  const course = data.courses.find(c => c.id === courseId);
   if (!course) {
     taskList.innerHTML = "<div class='muted'>请选择课程</div>";
     return;
@@ -346,17 +386,14 @@ taskForm?.addEventListener("submit", async e => {
 
   taskForm.reset();
   renderTasks();
-  renderGrades();
 });
 
 const calculateWeightedScore = (course, enrollment) => {
     let total = 0;
-
     course.tasks.forEach(taskDef => {
         const studentTask = enrollment.tasks.find(t => t.taskId === taskDef.id);
         const score = studentTask ? (Number(studentTask.score) || 0) : 0;
         const weight = Number(taskDef.weight) || 0;
-
         total += score * weight;
     });
     return Math.round(total * 10) / 10;
@@ -372,7 +409,6 @@ const renderGrades = async () => {
 
   enrollments.forEach(e => {
     const student = data.users.find(u => u.id === e.studentId);
-
     const calculatedGrade = calculateWeightedScore(course, e);
 
     const taskDetails = e.tasks.map(t => {
@@ -445,7 +481,6 @@ const renderGrades = async () => {
         <div style="display:flex; flex-direction:column; gap:10px;">
             <div>
                 <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:4px;">期末总评 (自动)</label>
-                <!-- 设置为 readonly, 值为计算出的结果 -->
                 <input type="text" readonly data-final="${e.id}" value="${calculatedGrade}"
                     style="width: 100%; font-size:18px; font-weight:bold; color:var(--accent); text-align:center; padding:8px; background:#f5f5f5; border:1px solid #ddd;" />
             </div>
@@ -473,7 +508,6 @@ const renderGrades = async () => {
       const id = btn.dataset.publish;
       const enrollment = (await getCourseEnrollments(courseId)).find(e => e.id === id);
       const grade = gradeRows.querySelector(`[data-final='${id}']`).value;
-
       await publishFinalGrade(courseId, enrollment.studentId, grade, currentUser.id);
       renderGrades();
     })
@@ -548,8 +582,8 @@ const processGradeImport = async (jsonData) => {
                 name: studentName || sIdStr,
                 email: `${sIdStr}@campus.edu`,
                 role: "student",
-                className: "计科22-2",
-                major: "计科"
+                className: "导入班级",
+                major: "未知专业"
             };
             data.users.push(user);
             newStudentCount++;
@@ -683,10 +717,13 @@ const init = async () => {
   if (!currentUser) return;
   await ensureSeeded();
   setupNav("teacher");
-  infoBox.textContent = `${currentUser.name}（${currentUser.username}），邮箱：${currentUser.email}`;
+
+  headerUserName.textContent = `${currentUser.name} (${currentUser.username})`;
+
+  initNavigation();
   loadDraft();
+
   renderCourses();
-  renderTeacherSchedule();
 };
 
 init();
