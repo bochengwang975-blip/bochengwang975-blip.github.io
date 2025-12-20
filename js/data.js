@@ -40,7 +40,6 @@ export const seedData = async () => {
       summary: "HTML5 + CSS3 + JS 现代前端实战，结合本地存储完成课程与成绩管理小型系统。",
       tags: ["前端", "项目制", "实战"],
       materials: [
-        // 添加了 date 属性
         { id: uuid(), title: "课程大纲", type: "doc", url: "#", desc: "PDF 大纲示例", date: "2025/12/01" },
         { id: uuid(), title: "示例视频", type: "video", url: "#", desc: "15 分钟演示", date: "2025/12/05" }
       ],
@@ -62,11 +61,10 @@ export const seedData = async () => {
       location: "B202",
       summary: "链表、树、图及算法复杂度分析，含课程实验与阶段测验。",
       tags: ["算法", "核心必修"],
-      // 添加了 date 属性
       materials: [{ id: uuid(), title: "实验指导书", type: "doc", url: "#", desc: "实验 1-6 文档", date: "2025/12/10" }],
       tasks: [
-        { id: uuid(), title: "实验 1：线性表", type: "assignment", due: "2025-12-30", weight: 0.2, description: "实现顺序表与链表增删查改。" },
-        { id: uuid(), title: "实验 2：树与遍历", type: "assignment", due: "2026-01-07", weight: 0.2, description: "二叉树与遍历实现。" },
+        { id: uuid(), title: "实验 1：线性表", type: "assignment", due: "2025-12-30", weight: 0.1, description: "实现顺序表与链表增删查改。" },
+        { id: uuid(), title: "实验 2：树与遍历", type: "assignment", due: "2026-01-07", weight: 0.1, description: "二叉树与遍历实现。" },
         { id: uuid(), title: "期末考试", type: "exam", due: "2026-01-18", weight: 0.6, description: "闭卷考试。" }
       ]
     }
@@ -77,15 +75,17 @@ export const seedData = async () => {
       id: uuid(),
       courseId: courses[0].id,
       studentId: student.id,
-      progress: 0.6,
+      progress: 1, // 修改点：进度设为 100%
       tasks: [
-        { taskId: courses[0].tasks[0].id, score: 90, status: "已提交" },
-        { taskId: courses[0].tasks[1].id, score: null, status: "待提交" },
-        { taskId: courses[0].tasks[2].id, score: null, status: "未开始" }
+        // 修改点：所有任务均已评分，方便测试自动计算
+        // 自动计算逻辑：90*0.25 + 95*0.25 + 88*0.5 = 22.5 + 23.75 + 44 = 90.25
+        { taskId: courses[0].tasks[0].id, score: 90, status: "已评分" },
+        { taskId: courses[0].tasks[1].id, score: 95, status: "已评分" },
+        { taskId: courses[0].tasks[2].id, score: 88, status: "已评分" }
       ],
-      finalGrade: 85,
-      published: true,
-      comments: "表现积极，注意按时提交作业。"
+      finalGrade: null, // 前端会自动计算并填充
+      published: false,
+      comments: "表现积极，代码规范。"
     },
     {
       id: uuid(),
@@ -93,7 +93,7 @@ export const seedData = async () => {
       studentId: student.id,
       progress: 0.3,
       tasks: [
-        { taskId: courses[1].tasks[0].id, score: 88, status: "已提交" },
+        { taskId: courses[1].tasks[0].id, score: 88, status: "已评分" },
         { taskId: courses[1].tasks[1].id, score: null, status: "待提交" },
         { taskId: courses[1].tasks[2].id, score: null, status: "未开始" }
       ],

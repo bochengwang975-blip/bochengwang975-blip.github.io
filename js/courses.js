@@ -41,7 +41,7 @@ export const addCourse = async (course, teacherId) => {
     location,
     summary: course.summary || "",
     tags: course.tags || [],
-    materials: course.materials || [], // 初始化课件资料
+    materials: course.materials || [],
     tasks: course.tasks || []
   });
   saveData(data);
@@ -49,7 +49,6 @@ export const addCourse = async (course, teacherId) => {
   return id;
 };
 
-// 修改课程信息
 export const updateCourse = async (courseId, updates) => {
     await ensureSeeded();
     const data = getData();
@@ -65,7 +64,6 @@ export const updateCourse = async (courseId, updates) => {
     return updatedCourse;
 };
 
-// 删除课程
 export const deleteCourse = async (courseId, actorId) => {
     await ensureSeeded();
     const data = getData();
@@ -80,7 +78,6 @@ export const deleteCourse = async (courseId, actorId) => {
     addLog(actorId, "删除课程", `删除了课程 ${name} 及所有相关记录`);
 };
 
-// 上传课件资料
 export const addCourseMaterial = async (courseId, file, actorId) => {
     await ensureSeeded();
     const data = getData();
@@ -156,12 +153,7 @@ export const recordTaskScore = async (courseId, studentId, taskId, score, actorI
   if (!enrollment) throw new Error("未找到选课记录");
   enrollment.tasks = enrollment.tasks.map(t => (t.taskId === taskId ? { ...t, score: Number(score), status: "已评分" } : t));
   saveData(data);
-  // 获取课程名称和任务名称
-  const course = data.courses.find(c => c.id === courseId);
-  const task = course?.tasks.find(t => t.id === taskId);
-  const courseName = course ? course.name : courseId;
-  const taskName = task ? task.title : taskId;
-  addLog(actorId, "录入成绩", `课程 ${courseName} 任务 ${taskName} 录入 ${score}`);
+  addLog(actorId, "录入成绩", `课程 ${courseId} 任务 ${taskId} 录入 ${score}`);
 };
 
 export const publishFinalGrade = async (courseId, studentId, grade, actorId) => {
@@ -172,12 +164,7 @@ export const publishFinalGrade = async (courseId, studentId, grade, actorId) => 
   enrollment.finalGrade = Number(grade);
   enrollment.published = false;
   saveData(data);
-  // 获取课程名称和学生名称
-  const course = data.courses.find(c => c.id === courseId);
-  const student = data.users.find(u => u.id === studentId);
-  const courseName = course ? course.name : courseId;
-  const studentName = student ? student.name : studentId;
-  addLog(actorId, "录入成绩", `课程 ${courseName} 学生 ${studentName} 成绩 ${grade}（待审核）`);
+  addLog(actorId, "发布成绩", `课程 ${courseId} 学生 ${studentId} 成绩 ${grade}`);
 };
 
 export const dropEnrollment = async (courseId, studentId) => {
@@ -185,8 +172,5 @@ export const dropEnrollment = async (courseId, studentId) => {
   const data = getData();
   data.enrollments = data.enrollments.filter(e => !(e.courseId === courseId && e.studentId === studentId));
   saveData(data);
-  // 获取课程名称
-  const course = data.courses.find(c => c.id === courseId);
-  const courseName = course ? course.name : courseId;
-  addLog(studentId, "退课", `退选课程 ${courseName}`);
+  addLog(studentId, "退课", `退选课程 ${courseId}`);
 };

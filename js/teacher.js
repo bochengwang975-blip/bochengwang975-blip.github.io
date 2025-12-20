@@ -12,6 +12,7 @@ import {
 } from "./courses.js";
 import { setupNav } from "./common.js";
 import { checkScheduleConflict, generateWeeklySchedule, formatTime } from "./schedule.js";
+import { uuid } from "./utils.js";
 
 const courseList = document.getElementById("teacher-courses");
 const courseForm = document.getElementById("course-form");
@@ -27,7 +28,6 @@ const previewModal = document.getElementById("preview-modal");
 const editModal = document.getElementById("edit-modal");
 const draftMsg = document.getElementById("draft-msg");
 
-// 新增引用
 const gradingModal = document.getElementById("grading-modal");
 const gradeStudentName = document.getElementById("grade-student-name");
 const gradeTaskTitle = document.getElementById("grade-task-title");
@@ -36,19 +36,21 @@ const gradeSubmitTime = document.getElementById("grade-submit-time");
 const gradeScoreInput = document.getElementById("grade-score-input");
 const btnConfirmGrade = document.getElementById("btn-confirm-grade");
 
+const btnDownloadTemplate = document.getElementById("btn-download-template");
+const fileInputImport = document.getElementById("excel-import-input");
+const btnTriggerImport = document.getElementById("btn-trigger-import");
+const importStatus = document.getElementById("import-status");
+
 let currentUser = null;
 let currentCourseId = null;
 let currentGradingInfo = null;
 
-// 草稿箱功能
 const DRAFT_KEY = "teacher_course_draft";
-
 const saveDraft = () => {
     const formData = new FormData(courseForm);
     const data = Object.fromEntries(formData.entries());
     localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
 };
-
 const loadDraft = () => {
     const draft = localStorage.getItem(DRAFT_KEY);
     if (draft) {
@@ -61,12 +63,10 @@ const loadDraft = () => {
         checkTeacherConflict();
     }
 };
-
 const clearDraft = () => {
     localStorage.removeItem(DRAFT_KEY);
     draftMsg.classList.add("hidden");
 };
-
 courseForm.addEventListener("input", saveDraft);
 
 const renderCourses = () => {
@@ -131,9 +131,7 @@ const renderCourseManager = (courseId) => {
         manageSection.classList.add("hidden");
         return;
     }
-
     manageSection.classList.remove("hidden");
-
     document.getElementById("manage-title").textContent = `${course.name} (${course.code})`;
     document.getElementById("manage-info").innerHTML = `
         <strong>时间：</strong>${course.time ? formatTime(course.time) : "未设置"} &nbsp;|&nbsp;
@@ -152,7 +150,6 @@ const renderCourseManager = (courseId) => {
             let icon = "📄";
             if (m.type.startsWith("image")) icon = "🖼️";
             if (m.type.startsWith("video") || m.type.startsWith("audio")) icon = "🎬";
-
             div.innerHTML = `
                 <span>${icon} <a href="${m.url}" target="_blank">${m.title}</a></span>
                 <span class="muted" style="font-size:12px">${m.date || "2025/12/20"}</span>
@@ -324,7 +321,8 @@ const renderTasks = () => {
   course.tasks.forEach(t => {
     const item = document.createElement("div");
     item.className = "list-item";
-    item.innerHTML = `<strong>${t.title}</strong> <span class="muted">${t.type}</span> 截止 ${t.due} | 权重 ${t.weight || "-"} <p class="muted">${t.description}</p>`;
+    const weightPercent = t.weight ? `${Math.round(t.weight * 100)}%` : "0%";
+    item.innerHTML = `<strong>${t.title}</strong> <span class="muted">${t.type}</span> 截止 ${t.due} | 权重 <span class="pill">${weightPercent}</span> <p class="muted">${t.description}</p>`;
     taskList.appendChild(item);
   });
 };
@@ -351,6 +349,19 @@ taskForm?.addEventListener("submit", async e => {
   renderGrades();
 });
 
+const calculateWeightedScore = (course, enrollment) => {
+    let total = 0;
+
+    course.tasks.forEach(taskDef => {
+        const studentTask = enrollment.tasks.find(t => t.taskId === taskDef.id);
+        const score = studentTask ? (Number(studentTask.score) || 0) : 0;
+        const weight = Number(taskDef.weight) || 0;
+
+        total += score * weight;
+    });
+    return Math.round(total * 10) / 10;
+};
+
 const renderGrades = async () => {
   const data = getData();
   const courseId = gradeSelect.value;
@@ -361,6 +372,8 @@ const renderGrades = async () => {
 
   enrollments.forEach(e => {
     const student = data.users.find(u => u.id === e.studentId);
+
+    const calculatedGrade = calculateWeightedScore(course, e);
 
     const taskDetails = e.tasks.map(t => {
         const taskDef = course.tasks.find(ct => ct.id === t.taskId);
@@ -395,10 +408,12 @@ const renderGrades = async () => {
             actionBtn = `<span class="muted" style="font-size:12px;">待提交</span>`;
         }
 
+        const weightStr = taskDef?.weight ? `${Math.round(taskDef.weight*100)}%` : "0%";
+
         return `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:8px 10px; background:#fff; border:1px solid #eee; border-radius:8px;">
                 <div style="flex:1;">
-                    <div style="font-weight:600; font-size:13px; color:#333;">${taskDef?.title || "未知任务"}</div>
+                    <div style="font-weight:600; font-size:13px; color:#333;">${taskDef?.title || "未知任务"} <span class="muted" style="font-size:11px; font-weight:normal;">(${weightStr})</span></div>
                     <div style="font-size:11px; color:#666; display:flex; align-items:center; margin-top:2px;">
                         <span style="background:${statusBg}; padding:1px 5px; border-radius:3px; margin-right:5px;">${statusIcon} ${statusText}</span>
                     </div>
@@ -429,9 +444,10 @@ const renderGrades = async () => {
       <td style="vertical-align: top; padding: 15px 10px;">
         <div style="display:flex; flex-direction:column; gap:10px;">
             <div>
-                <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:4px;">期末总评</label>
-                <input type="number" min="0" max="100" data-final="${e.id}" value="${e.finalGrade||''}" placeholder="-"
-                    style="width: 100%; font-size:16px; font-weight:bold; color:var(--accent); text-align:center; padding:8px;" />
+                <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:4px;">期末总评 (自动)</label>
+                <!-- 设置为 readonly, 值为计算出的结果 -->
+                <input type="text" readonly data-final="${e.id}" value="${calculatedGrade}"
+                    style="width: 100%; font-size:18px; font-weight:bold; color:var(--accent); text-align:center; padding:8px; background:#f5f5f5; border:1px solid #ddd;" />
             </div>
             <button class="mini" data-publish="${e.id}" style="width:100%; padding:8px;">${e.published ? "更新发布" : "发布成绩"}</button>
             <div style="font-size:11px; color:${e.published ? '#2c8f5f' : '#999'}; text-align:center;">
@@ -457,11 +473,124 @@ const renderGrades = async () => {
       const id = btn.dataset.publish;
       const enrollment = (await getCourseEnrollments(courseId)).find(e => e.id === id);
       const grade = gradeRows.querySelector(`[data-final='${id}']`).value;
-      if(grade === "") return alert("请输入期末成绩");
+
       await publishFinalGrade(courseId, enrollment.studentId, grade, currentUser.id);
       renderGrades();
     })
   );
+};
+
+btnDownloadTemplate.addEventListener("click", async () => {
+    if (!currentCourseId) return alert("请先选择课程");
+    const data = getData();
+    const course = data.courses.find(c => c.id === currentCourseId);
+    const enrollments = await getCourseEnrollments(currentCourseId);
+    const headers = ["学号", "姓名", ...course.tasks.map(t=>t.title)];
+    const rows = enrollments.map(e => {
+        const student = data.users.find(u => u.id === e.studentId);
+        const row = [e.studentId, student?.name || "未知"];
+        course.tasks.forEach(t => {
+            const taskRecord = e.tasks.find(tr => tr.taskId === t.id);
+            row.push(taskRecord?.score || "");
+        });
+        return row;
+    });
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "成绩单");
+    XLSX.writeFile(wb, `${course.name}_成绩模版.xlsx`);
+});
+
+btnTriggerImport.addEventListener("click", () => fileInputImport.click());
+fileInputImport.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    importStatus.textContent = "读取中...";
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+        try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            await processGradeImport(jsonData);
+            importStatus.textContent = "导入成功";
+            fileInputImport.value = "";
+            renderGrades();
+            setTimeout(() => { importStatus.textContent = ""; }, 3000);
+        } catch (error) {
+            console.error(error);
+            importStatus.textContent = "导入失败";
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+const processGradeImport = async (jsonData) => {
+    const data = getData();
+    const course = data.courses.find(c => c.id === currentCourseId);
+    let updateCount = 0;
+    let newStudentCount = 0;
+
+    for (const row of jsonData) {
+        const studentId = row["学号"] || row["Student ID"];
+        const studentName = row["姓名"] || row["Name"];
+
+        if (!studentId) continue;
+        const sIdStr = String(studentId);
+
+        let user = data.users.find(u => u.id === sIdStr);
+        if (!user) {
+            user = {
+                id: sIdStr,
+                username: sIdStr,
+                passwordHash: "imported_placeholder",
+                salt: "placeholder",
+                name: studentName || sIdStr,
+                email: `${sIdStr}@campus.edu`,
+                role: "student",
+                className: "计科22-2",
+                major: "计科"
+            };
+            data.users.push(user);
+            newStudentCount++;
+        }
+
+        let enrollment = data.enrollments.find(e => e.courseId === currentCourseId && e.studentId === sIdStr);
+        if (!enrollment) {
+            enrollment = {
+                id: uuid(),
+                courseId: currentCourseId,
+                studentId: sIdStr,
+                progress: 0,
+                tasks: [],
+                finalGrade: null,
+                published: false,
+                comments: ""
+            };
+            data.enrollments.push(enrollment);
+        }
+
+        if (row["期末总评"] !== undefined && row["期末总评"] !== "") {
+            enrollment.finalGrade = Number(row["期末总评"]);
+        }
+
+        course.tasks.forEach(task => {
+            const score = row[task.title];
+            if (score !== undefined && score !== "") {
+                let taskRecord = enrollment.tasks.find(t => t.taskId === task.id);
+                if (!taskRecord) {
+                    taskRecord = { taskId: task.id, score: null, status: "未开始" };
+                    enrollment.tasks.push(taskRecord);
+                }
+                taskRecord.score = Number(score);
+                taskRecord.status = "已评分";
+            }
+        });
+        updateCount++;
+    }
+
+    saveData(data);
+    addLog(currentUser.id, "批量导入", `导入处理了 ${updateCount} 条记录，新增学生 ${newStudentCount} 人`);
 };
 
 const openGradingModal = async (enrollId, taskId, studentName) => {
@@ -472,36 +601,25 @@ const openGradingModal = async (enrollId, taskId, studentName) => {
     const taskRecord = enrollment.tasks.find(t => t.taskId === taskId);
 
     currentGradingInfo = { courseId: currentCourseId, studentId: enrollment.studentId, taskId: taskId };
-
     gradeStudentName.textContent = `学生：${studentName}`;
-    gradeTaskTitle.textContent = `任务：${taskDef.title}`;
+    gradeTaskTitle.textContent = `任务：${taskDef.title} (权重: ${taskDef.weight*100}%)`;
     gradeScoreInput.value = taskRecord.score || "";
 
     const isImage = Math.random() > 0.5;
-    const submitContent = `<p>这是学生提交的作业文本内容。</p><p>GitHub 链接：<a href="#">https://github.com/student/repo</a></p>`;
+    const submitContent = isImage
+        ? `<div style="text-align:center;"><img src="https://via.placeholder.com/400x200?text=Student+Submission" style="max-width:100%; border-radius:4px;"><p>附件：final_work.jpg</p></div>`
+        : `<p>模拟学生提交的作业内容...</p>`;
 
     gradeSubmissionContent.innerHTML = submitContent;
-    gradeSubmitTime.textContent = new Date().toLocaleString(); // 模拟时间
-
+    gradeSubmitTime.textContent = new Date().toLocaleString();
     gradingModal.classList.remove("hidden");
 };
 
 btnConfirmGrade.addEventListener("click", async () => {
     if (!currentGradingInfo) return;
     const score = gradeScoreInput.value;
-
-    if (score === "" || score < 0 || score > 100) {
-        return alert("请输入有效的 0-100 分数");
-    }
-
-    await recordTaskScore(
-        currentGradingInfo.courseId,
-        currentGradingInfo.studentId,
-        currentGradingInfo.taskId,
-        score,
-        currentUser.id
-    );
-
+    if (score === "" || score < 0 || score > 100) return alert("请输入有效分数");
+    await recordTaskScore(currentGradingInfo.courseId, currentGradingInfo.studentId, currentGradingInfo.taskId, score, currentUser.id);
     gradingModal.classList.add("hidden");
     currentGradingInfo = null;
     renderGrades();
