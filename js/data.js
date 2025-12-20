@@ -40,8 +40,9 @@ export const seedData = async () => {
       summary: "HTML5 + CSS3 + JS 现代前端实战，结合本地存储完成课程与成绩管理小型系统。",
       tags: ["前端", "项目制", "实战"],
       materials: [
-        { id: uuid(), title: "课程大纲", type: "doc", url: "#", desc: "PDF 大纲示例" },
-        { id: uuid(), title: "示例视频", type: "video", url: "#", desc: "15 分钟演示" }
+        // 添加了 date 属性
+        { id: uuid(), title: "课程大纲", type: "doc", url: "#", desc: "PDF 大纲示例", date: "2025/12/01" },
+        { id: uuid(), title: "示例视频", type: "video", url: "#", desc: "15 分钟演示", date: "2025/12/05" }
       ],
       tasks: [
         { id: uuid(), title: "作业 1：页面布局", type: "assignment", due: "2025-12-28", weight: 0.25, description: "完成多页面布局与导航。" },
@@ -61,7 +62,8 @@ export const seedData = async () => {
       location: "B202",
       summary: "链表、树、图及算法复杂度分析，含课程实验与阶段测验。",
       tags: ["算法", "核心必修"],
-      materials: [{ id: uuid(), title: "实验指导书", type: "doc", url: "#", desc: "实验 1-6 文档" }],
+      // 添加了 date 属性
+      materials: [{ id: uuid(), title: "实验指导书", type: "doc", url: "#", desc: "实验 1-6 文档", date: "2025/12/10" }],
       tasks: [
         { id: uuid(), title: "实验 1：线性表", type: "assignment", due: "2025-12-30", weight: 0.2, description: "实现顺序表与链表增删查改。" },
         { id: uuid(), title: "实验 2：树与遍历", type: "assignment", due: "2026-01-07", weight: 0.2, description: "二叉树与遍历实现。" },
