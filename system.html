@@ -33,6 +33,21 @@
       <section class="grid grid-2">
         <div class="card">
           <h3>操作日志</h3>
+          <div style="margin-bottom: 1rem;">
+            <input 
+              type="text" 
+              id="log-search" 
+              placeholder="搜索日志（用户、操作、详情）" 
+              style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+            />
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <button id="clear-logs-1h" class="mini">清空最近1小时</button>
+              <button id="clear-logs-24h" class="mini">清空最近24小时</button>
+              <button id="clear-logs-1w" class="mini">清空最近一周</button>
+              <button id="clear-logs-1m" class="mini">清空最近一个月</button>
+              <button id="clear-logs-all" class="mini" style="color: rgb(255, 255, 255);">清空全部</button>
+            </div>
+          </div>
           <div class="scroll">
             <table>
               <thead>
@@ -46,6 +61,7 @@
               <tbody id="log-rows"></tbody>
             </table>
           </div>
+          <div id="log-search-result" style="margin-top: 0.5rem; color: #666; font-size: 0.9em;"></div>
         </div>
 
         <div class="card">
@@ -57,21 +73,6 @@
           <p class="muted">可选择 JSON 文件恢复，或直接粘贴 JSON 数据。</p>
           <textarea id="restore-text" rows="6" placeholder="粘贴 JSON 数据"></textarea>
           <button id="restore-btn" class="secondary">立即恢复</button>
-        </div>
-      </section>
-
-      <section class="grid grid-2">
-        <div class="card">
-          <h3>成绩异常监控</h3>
-          <p class="subtitle">检测课程成绩分布，标记及格率低或突变课程。</p>
-          <div id="anomaly-list" class="list"></div>
-        </div>
-        <div class="card">
-          <h3>系统操作</h3>
-          <div class="list">
-            <div class="list-item">支持清空 session 重新登录。</div>
-            <button id="clear-session">清除登录状态</button>
-          </div>
         </div>
       </section>
     </main>

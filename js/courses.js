@@ -156,7 +156,12 @@ export const recordTaskScore = async (courseId, studentId, taskId, score, actorI
   if (!enrollment) throw new Error("未找到选课记录");
   enrollment.tasks = enrollment.tasks.map(t => (t.taskId === taskId ? { ...t, score: Number(score), status: "已评分" } : t));
   saveData(data);
-  addLog(actorId, "录入成绩", `课程 ${courseId} 任务 ${taskId} 录入 ${score}`);
+  // 获取课程名称和任务名称
+  const course = data.courses.find(c => c.id === courseId);
+  const task = course?.tasks.find(t => t.id === taskId);
+  const courseName = course ? course.name : courseId;
+  const taskName = task ? task.title : taskId;
+  addLog(actorId, "录入成绩", `课程 ${courseName} 任务 ${taskName} 录入 ${score}`);
 };
 
 export const publishFinalGrade = async (courseId, studentId, grade, actorId) => {
@@ -167,7 +172,12 @@ export const publishFinalGrade = async (courseId, studentId, grade, actorId) => 
   enrollment.finalGrade = Number(grade);
   enrollment.published = false;
   saveData(data);
-  addLog(actorId, "录入成绩", `课程 ${courseId} 学生 ${studentId} 成绩 ${grade}（待审核）`);
+  // 获取课程名称和学生名称
+  const course = data.courses.find(c => c.id === courseId);
+  const student = data.users.find(u => u.id === studentId);
+  const courseName = course ? course.name : courseId;
+  const studentName = student ? student.name : studentId;
+  addLog(actorId, "录入成绩", `课程 ${courseName} 学生 ${studentName} 成绩 ${grade}（待审核）`);
 };
 
 export const dropEnrollment = async (courseId, studentId) => {
@@ -175,5 +185,8 @@ export const dropEnrollment = async (courseId, studentId) => {
   const data = getData();
   data.enrollments = data.enrollments.filter(e => !(e.courseId === courseId && e.studentId === studentId));
   saveData(data);
-  addLog(studentId, "退课", `退选课程 ${courseId}`);
+  // 获取课程名称
+  const course = data.courses.find(c => c.id === courseId);
+  const courseName = course ? course.name : courseId;
+  addLog(studentId, "退课", `退选课程 ${courseName}`);
 };

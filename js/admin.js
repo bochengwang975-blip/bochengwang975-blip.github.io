@@ -1549,7 +1549,12 @@ const approveGrade = (enrollmentId) => {
   
   enrollment.published = true;
   saveData(data);
-  addLog(currentUser.id, "审核通过成绩", `课程 ${enrollment.courseId} 学生 ${enrollment.studentId} 成绩 ${enrollment.finalGrade}`);
+  // 获取课程名称和学生名称
+  const course = data.courses.find(c => c.id === enrollment.courseId);
+  const student = data.users.find(u => u.id === enrollment.studentId);
+  const courseName = course ? course.name : enrollment.courseId;
+  const studentName = student ? student.name : enrollment.studentId;
+  addLog(currentUser.id, "审核通过成绩", `课程 ${courseName} 学生 ${studentName} 成绩 ${enrollment.finalGrade}`);
   
   // 刷新详情和列表
   renderGradeDetail(currentGradeCourseId);
@@ -1582,7 +1587,10 @@ gradeApproveAllBtn?.addEventListener("click", () => {
   });
   
   saveData(data);
-  addLog(currentUser.id, "批量审核通过成绩", `课程 ${currentGradeCourseId} 共 ${enrollments.length} 条成绩`);
+  // 获取课程名称
+  const course = data.courses.find(c => c.id === currentGradeCourseId);
+  const courseName = course ? course.name : currentGradeCourseId;
+  addLog(currentUser.id, "批量审核通过成绩", `课程 ${courseName} 共 ${enrollments.length} 条成绩`);
   
   // 刷新详情和列表
   renderGradeDetail(currentGradeCourseId);
