@@ -14,7 +14,6 @@ import { setupNav } from "./common.js";
 import { checkScheduleConflict, generateWeeklySchedule, formatTime } from "./schedule.js";
 import { uuid } from "./utils.js";
 
-// DOM 元素引用
 const courseList = document.getElementById("teacher-courses");
 const courseForm = document.getElementById("course-form");
 const taskForm = document.getElementById("task-form");
@@ -42,14 +41,12 @@ const fileInputImport = document.getElementById("excel-import-input");
 const btnTriggerImport = document.getElementById("btn-trigger-import");
 const importStatus = document.getElementById("import-status");
 
-// 轮播图相关元素 (管理模式)
 const bannerUpload = document.getElementById("banner-upload");
 const btnSaveBanner = document.getElementById("btn-save-banner");
 const btnRemoveBanner = document.getElementById("btn-remove-banner");
 const currentBannerImg = document.getElementById("current-banner-img");
 const noBannerText = document.getElementById("no-banner-text");
 
-// 导航按钮
 const navButtons = document.querySelectorAll(".nav-btn");
 const moduleViews = document.querySelectorAll(".module-view");
 
@@ -57,7 +54,6 @@ let currentUser = null;
 let currentCourseId = null;
 let currentGradingInfo = null;
 
-// 辅助函数：文件转 Base64
 const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -67,7 +63,6 @@ const fileToBase64 = (file) => {
     });
 };
 
-// --- 导航逻辑 ---
 const initNavigation = () => {
     navButtons.forEach(btn => {
         btn.addEventListener("click", () => {
@@ -88,7 +83,6 @@ const initNavigation = () => {
     });
 };
 
-// ... 草稿箱逻辑 ...
 const DRAFT_KEY = "teacher_course_draft";
 const saveDraft = () => {
     const formData = new FormData(courseForm);
@@ -113,7 +107,6 @@ const clearDraft = () => {
 };
 courseForm.addEventListener("input", saveDraft);
 
-// --- 课程列表与管理 ---
 const renderCourses = () => {
   const data = getData();
   const courses = data.courses.filter(c => {
@@ -177,7 +170,6 @@ const renderCourseManager = (courseId) => {
     `;
     document.getElementById("manage-summary").textContent = course.summary || "暂无简介";
 
-    // 渲染轮播图预览
     if (course.banner) {
         currentBannerImg.src = course.banner;
         currentBannerImg.style.display = "block";
@@ -323,7 +315,12 @@ document.getElementById("btn-preview").addEventListener("click", () => {
     const data = Object.fromEntries(formData.entries());
     if (!data.name || !data["time-day"] || !data["time-period"] || !data.location) { return alert("请填写完整的课程信息"); }
     const timeStr = formatTime({ day: parseInt(data["time-day"]), period: parseInt(data["time-period"]) });
-    document.getElementById("preview-content").innerHTML = `<p><strong>课程名称：</strong> ${data.name}</p><p><strong>时间地点：</strong> ${timeStr} @ ${data.location}</p>`;
+
+    document.getElementById("preview-content").innerHTML = `
+        <p><strong>课程名称：</strong> ${data.name}</p>
+        <p><strong>时间地点：</strong> ${timeStr} @ ${data.location}</p>
+        <p><strong>课程简介：</strong> ${data.summary || "无"}</p>
+    `;
     previewModal.classList.remove("hidden");
 });
 document.getElementById("btn-confirm-create").addEventListener("click", () => { previewModal.classList.add("hidden"); courseForm.requestSubmit(); });
@@ -357,7 +354,7 @@ courseForm?.addEventListener("submit", async e => {
   await addCourse(payload, currentUser.id);
   clearDraft();
   courseForm.reset();
-  bannerInput.value = ""; // 重置文件输入
+  bannerInput.value = "";
   document.getElementById("teacher-schedule-conflict-warning").style.display = "none";
   alert("课程创建成功！");
   document.querySelector('[data-target="module-courses"]').click();
@@ -383,7 +380,7 @@ taskForm?.addEventListener("submit", async e => {
   const form = new FormData(taskForm);
   const payload = Object.fromEntries(form.entries());
   await addTaskToCourse(taskSelect.value, payload, currentUser.id);
-  // sync tasks
+
   const data = getData();
   const course = data.courses.find(c => c.id === taskSelect.value);
   data.enrollments.filter(e => e.courseId === course.id).forEach(e => {
@@ -395,6 +392,17 @@ taskForm?.addEventListener("submit", async e => {
   renderTasks();
 });
 
+const calculateWeightedScore = (course, enrollment) => {
+    let total = 0;
+    course.tasks.forEach(taskDef => {
+        const studentTask = enrollment.tasks.find(t => t.taskId === taskDef.id);
+        const score = studentTask ? (Number(studentTask.score) || 0) : 0;
+        const weight = Number(taskDef.weight) || 0;
+        total += score * weight;
+    });
+    return Math.round(total * 10) / 10;
+};
+
 const renderGrades = async () => {
   const data = getData();
   const courseId = gradeSelect.value;
@@ -402,27 +410,42 @@ const renderGrades = async () => {
   if (!course) return;
   const enrollments = await getCourseEnrollments(courseId);
   gradeRows.innerHTML = "";
+
   enrollments.forEach(e => {
-    const student = data.users.find(u => u.id === e.studentId);
+    const student = data.users.find(u => String(u.id) === String(e.studentId));
+
+    const studentName = student ? student.name : "未知学生";
+    const studentIdDisplay = e.studentId || "无ID";
+    const className = student ? (student.className || "暂无班级") : "-";
+
     const calculatedGrade = calculateWeightedScore(course, e);
+
     const taskDetails = e.tasks.map(t => {
         const taskDef = course.tasks.find(ct => ct.id === t.taskId);
+
+        if (!taskDef) return "";
+
         let statusIcon = t.status === "已评分" ? "✅" : (t.status === "已提交" ? "📄" : "⏳");
         let actionBtn = "";
         if (t.status === "已评分") {
-            actionBtn = `<div style="font-weight:bold; color:#2c8f5f; margin-right:8px;">${t.score} 分</div><button class="mini secondary" style="padding:2px 6px;" data-grade-action="review" data-enroll-id="${e.id}" data-task-id="${t.taskId}" data-student-name="${student?.name}">修改</button>`;
+            actionBtn = `<div style="font-weight:bold; color:#2c8f5f; margin-right:8px;">${t.score} 分</div><button class="mini secondary" style="padding:2px 6px;" data-grade-action="review" data-enroll-id="${e.id}" data-task-id="${t.taskId}" data-student-name="${studentName}">修改</button>`;
         } else if (t.status === "已提交") {
-            actionBtn = `<button class="mini" style="background:var(--accent); color:white; padding:4px 10px;" data-grade-action="grade" data-enroll-id="${e.id}" data-task-id="${t.taskId}" data-student-name="${student?.name}">批阅</button>`;
+            actionBtn = `<button class="mini" style="background:var(--accent); color:white; padding:4px 10px;" data-grade-action="grade" data-enroll-id="${e.id}" data-task-id="${t.taskId}" data-student-name="${studentName}">批阅</button>`;
         } else {
             actionBtn = `<span class="muted" style="font-size:12px;">待提交</span>`;
         }
         return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:8px 10px; background:#fff; border:1px solid #eee; border-radius:8px;">
-                <div style="flex:1;"><div style="font-weight:600; font-size:13px; color:#333;">${taskDef?.title || "未知"}</div></div>
+                <div style="flex:1;"><div style="font-weight:600; font-size:13px; color:#333;">${taskDef.title}</div></div>
                 <div style="display:flex; align-items:center;">${actionBtn}</div></div>`;
     }).join("");
 
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td style="vertical-align: top;"><strong>${student?.name}</strong><br><span class="muted">${e.studentId}</span></td>
+    tr.innerHTML = `
+      <td style="vertical-align: top;">
+        <strong>${studentName}</strong><br>
+        <span class="muted">${studentIdDisplay}</span>
+        <div class="muted" style="font-size:0.8em; margin-top:2px;">${className}</div>
+      </td>
       <td style="vertical-align: top;">${taskDetails}</td>
       <td style="vertical-align: top;"><input type="text" readonly data-final="${e.id}" value="${calculatedGrade}" style="width: 100%; font-size:18px; font-weight:bold; color:var(--accent); text-align:center; background:#f5f5f5; border:1px solid #ddd;" /><button class="mini" data-publish="${e.id}" style="width:100%; margin-top:5px;">发布</button></td>`;
     gradeRows.appendChild(tr);
@@ -442,7 +465,27 @@ const renderGrades = async () => {
   );
 };
 
-btnDownloadTemplate.addEventListener("click", async () => { /* ... keep original ... */ });
+btnDownloadTemplate.addEventListener("click", async () => {
+    if (!currentCourseId) return alert("请先选择课程");
+    const data = getData();
+    const course = data.courses.find(c => c.id === currentCourseId);
+    const enrollments = await getCourseEnrollments(currentCourseId);
+    const headers = ["学号", "姓名", ...course.tasks.map(t=>t.title)];
+    const rows = enrollments.map(e => {
+        const student = data.users.find(u => u.id === e.studentId);
+        const row = [e.studentId, student?.name || "未知"];
+        course.tasks.forEach(t => {
+            const taskRecord = e.tasks.find(tr => tr.taskId === t.id);
+            row.push(taskRecord?.score || "");
+        });
+        return row;
+    });
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "成绩单");
+    XLSX.writeFile(wb, `${course.name}_成绩.xlsx`);
+});
+
 btnTriggerImport.addEventListener("click", () => fileInputImport.click());
 fileInputImport.addEventListener("change", async (e) => {
     const file = e.target.files[0];
@@ -527,15 +570,15 @@ const renderTeacherSchedule = () => {
   const { schedule } = scheduleData;
 
   let html = `
-    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem; table-layout: fixed;">
       <thead>
         <tr>
-          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">时间</th>
-          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周一</th>
-          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周二</th>
-          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周三</th>
-          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周四</th>
-          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5;">周五</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; width: 10%;">时间</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; width: 18%;">周一</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; width: 18%;">周二</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; width: 18%;">周三</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; width: 18%;">周四</th>
+          <th style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; width: 18%;">周五</th>
         </tr>
       </thead>
       <tbody>
@@ -545,11 +588,11 @@ const renderTeacherSchedule = () => {
 
   for (let period = 0; period < 5; period++) {
     html += `<tr>`;
-    html += `<td style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; font-weight: bold;">${periodLabels[period]}</td>`;
+    html += `<td style="border: 1px solid #ddd; padding: 0.5rem; background: #f5f5f5; font-weight: bold; height: 100px;">${periodLabels[period]}</td>`;
 
     for (let day = 0; day < 5; day++) {
       const cellContent = schedule[day][period];
-      html += `<td style="border: 1px solid #ddd; padding: 0.5rem; vertical-align: top; min-height: 80px;">`;
+      html += `<td style="border: 1px solid #ddd; padding: 0.5rem; vertical-align: top; height: 100px; overflow: hidden;">`;
 
       if (cellContent && Array.isArray(cellContent) && cellContent.length > 0) {
         cellContent.forEach(item => {

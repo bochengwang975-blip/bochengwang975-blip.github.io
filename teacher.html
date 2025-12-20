@@ -56,12 +56,11 @@
                         </div>
                     </div>
 
-                    <div class="highlight" style="margin-top: 15px; display: flex; align-items: flex-start; gap: 20px;">
+                    <div class="highlight" style="margin-top: 15px; display: flex; align-items: center; gap: 20px;">
                         <div style="flex: 1;">
-                            <h4>🖼️ 首页轮播图设置</h4>
-                            <p class="muted" style="font-size: 12px;">上传一张精美的图片，将会在首页轮播展示该课程。</p>
-                            <div class="flex" style="margin-top: 10px;">
-                                <input type="file" id="banner-upload" accept="image/*" />
+                            <h4 style="margin: 0 0 10px 0;">🖼️ 首页轮播图设置</h4>
+                            <div class="flex">
+                                <input type="file" id="banner-upload" accept="image/*" style="margin-bottom: 0;" />
                                 <button class="mini" id="btn-save-banner">保存图片</button>
                                 <button class="mini secondary" id="btn-remove-banner" style="display:none;">移除图片</button>
                             </div>
@@ -128,7 +127,6 @@
                         </div>
                         <input name="location" id="teacher-course-location" placeholder="上课地点（如：A402）" required />
 
-                        <!-- 新增：创建时的轮播图设置 -->
                         <div class="list-item" style="background: transparent; padding-left: 0;">
                             <label class="muted" style="font-size: 12px; display: block; margin-bottom: 5px;">设置首页轮播图 (可选)</label>
                             <input type="file" id="create-banner-input" accept="image/*" />
@@ -136,9 +134,10 @@
 
                         <div id="teacher-schedule-conflict-warning" style="display: none; padding: 0.5rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin: 0.5rem 0; color: #856404;"></div>
                         <textarea name="summary" placeholder="课程简介" rows="4"></textarea>
-                        <div class="flex" style="margin-top: 10px;">
+
+                        <div class="flex" style="margin-top: 10px; gap: 15px;">
                             <button type="button" id="btn-preview" class="secondary" style="flex:1">预览</button>
-                            <button type="submit" style="flex:2">创建课程</button>
+                            <button type="submit" style="flex:1">创建课程</button>
                         </div>
                     </form>
                 </div>
@@ -198,8 +197,8 @@
                         </div>
                     </div>
 
-                    <div class="flex" style="margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; flex-wrap: wrap; gap: 10px; align-items: center;">
-                        <button class="mini secondary" id="btn-download-template">📥 下载模版</button>
+                    <div class="flex" style="margin-bottom: 15px; flex-wrap: wrap; gap: 10px; align-items: center;">
+                        <button class="mini secondary" id="btn-download-template">📥 下载成绩</button>
                         <input type="file" id="excel-import-input" accept=".xlsx, .xls" class="hidden" />
                         <button class="mini" id="btn-trigger-import">📤 导入成绩</button>
                         <span class="muted" style="font-size: 12px;" id="import-status"></span>
@@ -232,9 +231,9 @@
         <div class="modal card">
             <h3>课程创建预览</h3>
             <div id="preview-content" class="list-item"></div>
-            <div class="flex" style="margin-top: 20px; justify-content: flex-end;">
-                <button class="secondary" onclick="document.getElementById('preview-modal').classList.add('hidden')">关闭</button>
-                <button id="btn-confirm-create">确认创建</button>
+            <div class="flex" style="margin-top: 20px; gap: 15px;">
+                <button class="secondary" onclick="document.getElementById('preview-modal').classList.add('hidden')" style="flex:1">关闭</button>
+                <button id="btn-confirm-create" style="flex:1">确认创建</button>
             </div>
         </div>
     </div>

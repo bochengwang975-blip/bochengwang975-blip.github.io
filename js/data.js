@@ -65,8 +65,8 @@ export const seedData = async () => {
       banner: "images/banner_ds.jpg",
       materials: [{ id: uuid(), title: "实验指导书", type: "doc", url: "#", desc: "实验 1-6 文档", date: "2025/12/10" }],
       tasks: [
-        { id: uuid(), title: "实验 1：线性表", type: "assignment", due: "2025-12-30", weight: 0.2, description: "实现顺序表与链表增删查改。" },
-        { id: uuid(), title: "实验 2：树与遍历", type: "assignment", due: "2026-01-07", weight: 0.2, description: "二叉树与遍历实现。" },
+        { id: uuid(), title: "实验 1：线性表", type: "assignment", due: "2025-12-30", weight: 0.1, description: "实现顺序表与链表增删查改。" },
+        { id: uuid(), title: "实验 2：树与遍历", type: "assignment", due: "2026-01-07", weight: 0.1, description: "二叉树与遍历实现。" },
         { id: uuid(), title: "期末考试", type: "exam", due: "2026-01-18", weight: 0.6, description: "闭卷考试。" }
       ]
     }
