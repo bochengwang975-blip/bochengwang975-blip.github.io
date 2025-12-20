@@ -1,5 +1,5 @@
 import { requireAuth } from "./auth.js";
-import { ensureSeeded, getData, backupData, restoreData, addLog, getSessionUser, clearLogs } from "./storage.js";
+import { ensureSeeded, getData, backupData, restoreData, addLog, getSessionUser, clearLogs, getAutoBackupInfo, getAutoBackup, performAutoBackup } from "./storage.js";
 import { setupNav } from "./common.js";
 import { downloadJSON } from "./utils.js";
 
@@ -15,6 +15,8 @@ const clearLogs24hBtn = document.getElementById("clear-logs-24h");
 const clearLogs1wBtn = document.getElementById("clear-logs-1w");
 const clearLogs1mBtn = document.getElementById("clear-logs-1m");
 const clearLogsAllBtn = document.getElementById("clear-logs-all");
+const backupStatusText = document.getElementById("backup-status-text");
+const downloadAutoBackupBtn = document.getElementById("download-auto-backup-btn");
 
 let currentUser = null;
 let searchKeyword = "";
@@ -86,6 +88,57 @@ backupBtn?.addEventListener("click", () => {
   downloadJSON(data, "grade-platform-backup.json");
   addLog(currentUser.id, "导出备份", "系统管理员导出数据");
   renderLogs();
+  renderBackupStatus();
+});
+
+// 渲染自动备份状态
+const renderBackupStatus = () => {
+  const backupInfo = getAutoBackupInfo();
+  
+  if (!backupInfo) {
+    backupStatusText.innerHTML = "暂无自动备份记录<br><span style='font-size: 0.85em; color: #999;'>系统将在首次访问时创建备份</span>";
+    downloadAutoBackupBtn.style.display = "none";
+    return;
+  }
+  
+  const now = Date.now();
+  const timeSinceBackup = now - backupInfo.timestamp;
+  const hoursSinceBackup = Math.floor(timeSinceBackup / (60 * 60 * 1000));
+  const minutesSinceBackup = Math.floor((timeSinceBackup % (60 * 60 * 1000)) / (60 * 1000));
+  const daysSinceBackup = Math.floor(hoursSinceBackup / 24);
+  
+  let statusHTML = `<strong>最后备份时间：</strong>${backupInfo.date}<br>`;
+  
+  if (daysSinceBackup > 0) {
+    statusHTML += `<span style='color: #e67e22;'>距离上次备份：${daysSinceBackup}天${hoursSinceBackup % 24}小时</span><br>`;
+    statusHTML += `系统将在下次访问时自动备份`;
+  } else if (hoursSinceBackup < 24) {
+    const remainingHours = 24 - hoursSinceBackup - 1;
+    const remainingMinutes = 60 - minutesSinceBackup;
+    statusHTML += `距离上次备份：${hoursSinceBackup}小时${minutesSinceBackup > 0 ? minutesSinceBackup + "分钟" : ""}<br>`;
+    statusHTML += `<span style='color: #27ae60;'>下次备份将在 ${remainingHours}小时${remainingMinutes > 0 ? remainingMinutes + "分钟" : ""}后自动执行</span>`;
+  } else {
+    statusHTML += `<span style='color: #e67e22;'>距离上次备份已超过24小时</span><br>`;
+    statusHTML += `系统将在下次访问时自动备份`;
+  }
+  
+  backupStatusText.innerHTML = statusHTML;
+  downloadAutoBackupBtn.style.display = "inline-block";
+};
+
+// 下载自动备份
+downloadAutoBackupBtn?.addEventListener("click", () => {
+  const backupData = getAutoBackup();
+  if (!backupData) {
+    alert("没有可用的自动备份");
+    return;
+  }
+  
+  const backupInfo = getAutoBackupInfo();
+  const filename = `auto-backup-${new Date(backupInfo.timestamp).toISOString().split('T')[0]}.json`;
+  downloadJSON(backupData, filename);
+  addLog(currentUser.id, "下载自动备份", `下载自动备份文件：${filename}`);
+  renderLogs();
 });
 
 importFile?.addEventListener("change", e => {
@@ -98,6 +151,7 @@ importFile?.addEventListener("change", e => {
       restoreData(obj);
       addLog(currentUser.id, "导入备份", `从文件 ${file.name} 恢复`);
       renderLogs();
+      renderBackupStatus();
       alert("数据已恢复");
     } catch (err) {
       alert("解析失败：" + err.message);
@@ -112,6 +166,7 @@ restoreBtn?.addEventListener("click", () => {
     restoreData(obj);
     addLog(currentUser.id, "粘贴恢复", "通过文本恢复数据");
     renderLogs();
+    renderBackupStatus();
     alert("数据已恢复");
   } catch (err) {
     alert("JSON 格式不正确");
@@ -147,6 +202,14 @@ const init = async () => {
   await ensureSeeded();
   setupNav("system");
   renderLogs();
+  renderBackupStatus();
+  
+  // 设置定期检查备份（每5分钟检查一次）
+  setInterval(() => {
+    performAutoBackup();
+    renderBackupStatus();
+    renderLogs();
+  }, 5 * 60 * 1000);
 };
 
 init();

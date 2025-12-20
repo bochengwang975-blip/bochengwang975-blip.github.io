@@ -66,6 +66,11 @@
 
         <div class="card">
           <h3>备份与恢复</h3>
+          <div id="auto-backup-status" style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(139, 21, 55, 0.05); border-radius: 8px; border-left: 3px solid var(--accent);">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">自动备份状态</div>
+            <div id="backup-status-text" class="muted" style="font-size: 0.9em;"></div>
+            <button id="download-auto-backup-btn" class="mini" style="margin-top: 0.5rem; display: none;">下载最新自动备份</button>
+          </div>
           <div class="flex">
             <button id="backup-btn">导出备份</button>
             <input type="file" id="import-file" />

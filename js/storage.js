@@ -3,6 +3,8 @@ import { formatDate, uuid } from "./utils.js";
 
 export const STORAGE_KEY = "gm-data-v1";
 export const SESSION_KEY = "gm-session";
+export const AUTO_BACKUP_KEY = "gm-auto-backup";
+export const AUTO_BACKUP_INTERVAL = 24 * 60 * 60 * 1000; // 24小时（毫秒）
 
 export const ensureSeeded = async () => {
   const cached = localStorage.getItem(STORAGE_KEY);
@@ -10,6 +12,8 @@ export const ensureSeeded = async () => {
     const seeded = await seedData();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
   }
+  // 检查并执行自动备份
+  checkAndPerformAutoBackup();
 };
 
 export const getData = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
@@ -126,6 +130,79 @@ export const backupData = () => getData();
 export const restoreData = obj => {
   saveData(obj);
   addLog("system", "恢复数据", "通过前端导入 JSON 备份恢复。");
+};
+
+// 自动备份相关功能
+export const getAutoBackupInfo = () => {
+  try {
+    const info = localStorage.getItem(AUTO_BACKUP_KEY);
+    return info ? JSON.parse(info) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+export const saveAutoBackup = (backupData) => {
+  try {
+    const now = Date.now();
+    const backupInfo = {
+      timestamp: now,
+      date: formatDate(new Date(now)),
+      data: backupData
+    };
+    localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(backupInfo));
+    return backupInfo;
+  } catch (e) {
+    console.error("保存自动备份失败:", e);
+    return null;
+  }
+};
+
+export const getAutoBackup = () => {
+  const info = getAutoBackupInfo();
+  return info ? info.data : null;
+};
+
+export const shouldPerformAutoBackup = () => {
+  const info = getAutoBackupInfo();
+  if (!info) {
+    // 如果没有备份记录，需要立即备份
+    return true;
+  }
+  
+  const now = Date.now();
+  const timeSinceLastBackup = now - info.timestamp;
+  
+  // 如果距离上次备份超过24小时，需要备份
+  return timeSinceLastBackup >= AUTO_BACKUP_INTERVAL;
+};
+
+export const performAutoBackup = () => {
+  if (!shouldPerformAutoBackup()) {
+    return false;
+  }
+  
+  try {
+    const data = backupData();
+    const backupInfo = saveAutoBackup(data);
+    
+    if (backupInfo) {
+      addLog("system", "自动备份", `系统自动备份数据（${backupInfo.date}）`);
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.error("自动备份失败:", e);
+    addLog("system", "自动备份失败", `备份过程中出现错误: ${e.message}`);
+    return false;
+  }
+};
+
+// 初始化时检查并执行自动备份
+export const checkAndPerformAutoBackup = () => {
+  if (shouldPerformAutoBackup()) {
+    performAutoBackup();
+  }
 };
 
 export const findUserByUsername = username => {
