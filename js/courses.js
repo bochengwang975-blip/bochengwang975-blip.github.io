@@ -42,7 +42,8 @@ export const addCourse = async (course, teacherId) => {
     summary: course.summary || "",
     tags: course.tags || [],
     materials: course.materials || [],
-    tasks: course.tasks || []
+    tasks: course.tasks || [],
+    banner: course.banner || null // 新增：保存轮播图数据
   });
   saveData(data);
   addLog(teacherId || teacherIds[0], "创建课程", `新增课程 ${course.name}`);
@@ -56,9 +57,7 @@ export const updateCourse = async (courseId, updates) => {
     if (courseIndex === -1) throw new Error("课程不存在");
 
     const course = data.courses[courseIndex];
-
     const { id, ...safeUpdates } = updates;
-
     const updatedCourse = { ...course, ...safeUpdates };
     updatedCourse.id = courseId;
 

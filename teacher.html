@@ -39,7 +39,7 @@
             <div id="module-courses" class="module-view active">
                 <div class="module-header">
                     <h2>课程管理</h2>
-                    <p class="subtitle">查看我的课程列表，点击“管理”上传资料或修改信息。</p>
+                    <p class="subtitle">查看我的课程列表，点击“管理”上传资料、设置轮播图或修改信息。</p>
                 </div>
 
                 <div class="card" style="margin-bottom: 20px;">
@@ -55,6 +55,23 @@
                             <button class="mini" style="background: #b23c3c; color: white;" id="btn-delete-course">🗑️ 删除课程</button>
                         </div>
                     </div>
+
+                    <div class="highlight" style="margin-top: 15px; display: flex; align-items: flex-start; gap: 20px;">
+                        <div style="flex: 1;">
+                            <h4>🖼️ 首页轮播图设置</h4>
+                            <p class="muted" style="font-size: 12px;">上传一张精美的图片，将会在首页轮播展示该课程。</p>
+                            <div class="flex" style="margin-top: 10px;">
+                                <input type="file" id="banner-upload" accept="image/*" />
+                                <button class="mini" id="btn-save-banner">保存图片</button>
+                                <button class="mini secondary" id="btn-remove-banner" style="display:none;">移除图片</button>
+                            </div>
+                        </div>
+                        <div style="width: 200px; height: 120px; background: #eee; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px dashed #ccc;">
+                            <img id="current-banner-img" src="" alt="暂无图片" style="max-width: 100%; max-height: 100%; display: none;" />
+                            <span id="no-banner-text" class="muted" style="font-size: 12px;">暂无图片</span>
+                        </div>
+                    </div>
+
                     <div class="grid grid-2" style="margin-top:15px;">
                         <div>
                             <h4>基本信息</h4>
@@ -65,7 +82,7 @@
                             <h4>课件资料</h4>
                             <div class="flex" style="margin-bottom: 10px;">
                                 <input type="file" id="file-upload" />
-                                <button class="mini" id="btn-upload">上传</button>
+                                <button class="mini" id="btn-upload">上传资料</button>
                             </div>
                             <div id="material-list" class="list scroll" style="height: 150px;"></div>
                         </div>
@@ -110,6 +127,13 @@
                             </select>
                         </div>
                         <input name="location" id="teacher-course-location" placeholder="上课地点（如：A402）" required />
+
+                        <!-- 新增：创建时的轮播图设置 -->
+                        <div class="list-item" style="background: transparent; padding-left: 0;">
+                            <label class="muted" style="font-size: 12px; display: block; margin-bottom: 5px;">设置首页轮播图 (可选)</label>
+                            <input type="file" id="create-banner-input" accept="image/*" />
+                        </div>
+
                         <div id="teacher-schedule-conflict-warning" style="display: none; padding: 0.5rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin: 0.5rem 0; color: #856404;"></div>
                         <textarea name="summary" placeholder="课程简介" rows="4"></textarea>
                         <div class="flex" style="margin-top: 10px;">
