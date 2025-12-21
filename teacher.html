@@ -21,6 +21,7 @@
     </header>
 
     <div class="layout-container">
+        <!-- 左侧侧边栏导航 -->
         <aside class="sidebar">
             <div class="sidebar-menu">
                 <button class="nav-btn active" data-target="module-courses">📚 课程管理</button>
@@ -34,8 +35,10 @@
             </div>
         </aside>
 
+        <!-- 右侧主要内容区域 -->
         <main class="main-content">
 
+            <!-- 模块 1: 课程管理 (列表 + 详情) -->
             <div id="module-courses" class="module-view active">
                 <div class="module-header">
                     <h2>课程管理</h2>
@@ -47,6 +50,7 @@
                     <div id="teacher-courses" class="list"></div>
                 </div>
 
+                <!-- 课程详情与资料管理区域 -->
                 <section id="course-manage-section" class="card hidden" style="border-left: 5px solid var(--accent);">
                     <div class="flex-between">
                         <h3>当前管理课程：<span id="manage-title"></span></h3>
@@ -56,6 +60,7 @@
                         </div>
                     </div>
 
+                    <!-- 轮播图设置区域 (管理模式) -->
                     <div class="highlight" style="margin-top: 15px; display: flex; align-items: center; gap: 20px;">
                         <div style="flex: 1;">
                             <h4 style="margin: 0 0 10px 0;">🖼️ 首页轮播图设置</h4>
@@ -89,6 +94,7 @@
                 </section>
             </div>
 
+            <!-- 模块 2: 新建课程 -->
             <div id="module-create" class="module-view">
                 <div class="module-header">
                     <h2>新建课程</h2>
@@ -143,6 +149,7 @@
                 </div>
             </div>
 
+            <!-- 模块 3: 我的课表 -->
             <div id="module-schedule" class="module-view">
                 <div class="module-header">
                     <h2>我的周课表</h2>
@@ -153,6 +160,7 @@
                 </div>
             </div>
 
+            <!-- 模块 4: 任务管理 -->
             <div id="module-tasks" class="module-view">
                 <div class="module-header">
                     <h2>任务管理</h2>
@@ -184,6 +192,7 @@
                 </div>
             </div>
 
+            <!-- 模块 5: 成绩与批改 -->
             <div id="module-grades" class="module-view">
                 <div class="module-header">
                     <h2>成绩与批改</h2>
@@ -198,7 +207,7 @@
                     </div>
 
                     <div class="flex" style="margin-bottom: 15px; flex-wrap: wrap; gap: 10px; align-items: center;">
-                        <button class="mini secondary" id="btn-download-template">📥 下载成绩</button>
+                        <button class="mini secondary" id="btn-download-template">📥 下载模版</button>
                         <input type="file" id="excel-import-input" accept=".xlsx, .xls" class="hidden" />
                         <button class="mini" id="btn-trigger-import">📤 导入成绩</button>
                         <span class="muted" style="font-size: 12px;" id="import-status"></span>
@@ -227,6 +236,7 @@
         </main>
     </div>
 
+    <!-- 模态框部分 -->
     <div id="preview-modal" class="modal-overlay hidden">
         <div class="modal card">
             <h3>课程创建预览</h3>
@@ -248,9 +258,11 @@
                 <input name="location" required />
                 <label class="muted">课程简介</label>
                 <textarea name="summary"></textarea>
-                <div class="flex" style="margin-top: 10px; justify-content: flex-end;">
-                    <button type="button" class="secondary" onclick="document.getElementById('edit-modal').classList.add('hidden')">取消</button>
-                    <button type="submit">保存修改</button>
+
+                <!-- 修改点：按钮等宽设置 -->
+                <div class="flex" style="margin-top: 10px; gap: 15px;">
+                    <button type="button" class="secondary" onclick="document.getElementById('edit-modal').classList.add('hidden')" style="flex:1">取消</button>
+                    <button type="submit" style="flex:1">保存修改</button>
                 </div>
             </form>
         </div>
