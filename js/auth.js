@@ -52,6 +52,21 @@ export const login = async (username, password) => {
   return user;
 };
 
+export const changePassword = async (userId, oldPassword, newPassword) => {
+  await ensureSeeded();
+  const data = getData();
+  const user = data.users.find(u => u.id === userId);
+  if (!user) throw new Error("用户不存在");
+  const hashed = await hashPassword(oldPassword, user.salt);
+  if (hashed !== user.passwordHash) throw new Error("原密码错误");
+  const salt = randomSalt();
+  user.salt = salt;
+  user.passwordHash = await hashPassword(newPassword, salt);
+  user.mustChangePassword = false; // 清除强制修改密码标志
+  saveData(data);
+  addLog(user.id, "修改密码", "用户主动修改密码");
+  return true;
+};
 
 export const register = async ({ username, password, name, email, role = "student", className, major }) => {
   await ensureSeeded();

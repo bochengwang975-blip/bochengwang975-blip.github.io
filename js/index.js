@@ -5,6 +5,15 @@ import { formatTime, formatLocation } from "./schedule.js";
 
 const courseCards = document.getElementById("course-cards");
 const searchInput = document.getElementById("search");
+const carouselContainer = document.getElementById("home-carousel");
+const carouselTrack = document.getElementById("carousel-track");
+const carouselDots = document.getElementById("carousel-dots");
+const prevBtn = document.getElementById("prev-btn");
+const nextBtn = document.getElementById("next-btn");
+
+let currentSlide = 0;
+let slides = [];
+let autoPlayInterval;
 
 const renderCourses = async keyword => {
   await ensureSeeded();
@@ -12,6 +21,7 @@ const renderCourses = async keyword => {
   const user = getSessionUser();
   const courses = await searchCourses(keyword);
   courseCards.innerHTML = "";
+
   courses.forEach(c => {
     const teacherIds = c.teacherIds || (c.teacherId ? [c.teacherId] : []);
     const teachers = teacherIds.map(tid => data.users.find(u => u.id === tid)).filter(Boolean);
@@ -45,7 +55,10 @@ const renderCourses = async keyword => {
     courseCards.appendChild(card);
   });
 
-  // bind enroll buttons
+  if (!keyword && carouselTrack) {
+      renderCarousel(courses);
+  }
+
   courseCards.querySelectorAll("[data-enroll]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const courseId = btn.dataset.enroll;
@@ -59,6 +72,73 @@ const renderCourses = async keyword => {
     });
   });
 };
+
+const renderCarousel = (courses) => {
+    const bannerCourses = courses.filter(c => c.banner);
+    if (bannerCourses.length === 0) {
+        carouselContainer.classList.add("hidden");
+        return;
+    }
+
+    carouselContainer.classList.remove("hidden");
+    carouselTrack.innerHTML = "";
+    carouselDots.innerHTML = "";
+    slides = [];
+
+    bannerCourses.forEach((c, index) => {
+        const slide = document.createElement("div");
+        slide.className = "carousel-slide";
+        slide.style.backgroundImage = `url(${c.banner})`;
+        slide.innerHTML = `
+            <div class="carousel-caption">
+                <h2>${c.name}</h2>
+                <p>${c.department} - ${c.summary}</p>
+                <a href="student.html?course=${c.id}" class="btn">查看课程</a>
+            </div>
+        `;
+        carouselTrack.appendChild(slide);
+        slides.push(slide);
+
+        const dot = document.createElement("div");
+        dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
+        dot.addEventListener("click", () => goToSlide(index));
+        carouselDots.appendChild(dot);
+    });
+
+    updateCarousel();
+    startAutoPlay();
+};
+
+const updateCarousel = () => {
+    carouselTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+    document.querySelectorAll(".carousel-dot").forEach((d, i) => {
+        d.classList.toggle("active", i === currentSlide);
+    });
+};
+
+const goToSlide = (n) => {
+    currentSlide = n;
+    if (currentSlide >= slides.length) currentSlide = 0;
+    if (currentSlide < 0) currentSlide = slides.length - 1;
+    updateCarousel();
+    resetAutoPlay();
+};
+
+const nextSlide = () => goToSlide(currentSlide + 1);
+const prevSlide = () => goToSlide(currentSlide - 1);
+
+const startAutoPlay = () => {
+    if (autoPlayInterval) clearInterval(autoPlayInterval);
+    autoPlayInterval = setInterval(nextSlide, 5000);
+};
+
+const resetAutoPlay = () => {
+    clearInterval(autoPlayInterval);
+    startAutoPlay();
+};
+
+if (prevBtn) prevBtn.addEventListener("click", prevSlide);
+if (nextBtn) nextBtn.addEventListener("click", nextSlide);
 
 const init = async () => {
   await ensureSeeded();

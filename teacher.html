@@ -5,122 +5,296 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>教师端 - 成绩管理教学平台</title>
     <link rel="stylesheet" href="css/style.css" />
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   </head>
   <body>
     <header>
-      <div class="nav container nav">
+      <div class="nav container-fluid nav">
         <div class="brand">
           <span class="tag">SZU</span>
           <span class="tagline">教师端</span>
         </div>
-        <div class="nav-links"></div>
+        <div class="nav-links">
+            <span id="header-user-name" class="muted" style="font-size: 0.9em;"></span>
+        </div>
       </div>
     </header>
 
-    <main class="container">
-      <section class="hero">
-        <div>
-          <div class="badge">课程与成绩管理</div>
-          <h1>发布课程、任务与成绩</h1>
-          <p class="subtitle">上传课程资料、布置作业考试、录入成绩并发布。</p>
-        </div>
-        <div class="card">
-          <h3>教师信息</h3>
-          <p id="teacher-info" class="muted"></p>
-        </div>
-      </section>
-
-      <section class="grid grid-2">
-        <div class="card">
-          <h3>我的课程</h3>
-          <div id="teacher-courses" class="list"></div>
-        </div>
-        <div class="card">
-          <h3>我的周课表</h3>
-          <div id="teacher-schedule-view" style="overflow-x: auto;"></div>
-        </div>
-        <div class="card">
-          <h3>新建课程</h3>
-          <form id="course-form" class="list">
-            <input name="name" placeholder="课程名称" required />
-            <input name="code" placeholder="课程代码" />
-            <input name="department" placeholder="院系" />
-            <input name="credits" type="number" placeholder="学分" />
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-              <select name="time-day" id="teacher-course-time-day" required>
-                <option value="">选择星期</option>
-                <option value="1">周一</option>
-                <option value="2">周二</option>
-                <option value="3">周三</option>
-                <option value="4">周四</option>
-                <option value="5">周五</option>
-              </select>
-              <select name="time-period" id="teacher-course-time-period" required>
-                <option value="">选择节次</option>
-                <option value="1">上午第1节</option>
-                <option value="2">上午第2节</option>
-                <option value="3">下午第1节</option>
-                <option value="4">下午第2节</option>
-                <option value="5">晚上</option>
-              </select>
+    <div class="layout-container">
+        <!-- 左侧侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="sidebar-menu">
+                <button class="nav-btn active" data-target="module-courses">📚 课程管理</button>
+                <button class="nav-btn" data-target="module-create">➕ 新建课程</button>
+                <button class="nav-btn" data-target="module-schedule">📅 我的课表</button>
+                <button class="nav-btn" data-target="module-tasks">📝 任务发布</button>
+                <button class="nav-btn" data-target="module-grades">📊 成绩批改</button>
             </div>
-            <input name="location" id="teacher-course-location" placeholder="上课地点（如：A402）" required />
-            <div id="teacher-schedule-conflict-warning" style="display: none; padding: 0.5rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin: 0.5rem 0; color: #856404;"></div>
-            <textarea name="summary" placeholder="课程简介"></textarea>
-            <button type="submit">创建课程</button>
-          </form>
-        </div>
-      </section>
+            <div class="sidebar-footer">
+                <p class="muted" style="font-size: 12px; padding: 20px;">© 2025 SZU Teaching</p>
+            </div>
+        </aside>
 
-      <section class="grid grid-2">
-        <div class="card">
+        <!-- 右侧主要内容区域 -->
+        <main class="main-content">
+
+            <!-- 模块 1: 课程管理 (列表 + 详情) -->
+            <div id="module-courses" class="module-view active">
+                <div class="module-header">
+                    <h2>课程管理</h2>
+                    <p class="subtitle">查看我的课程列表，点击“管理”上传资料、设置轮播图或修改信息。</p>
+                </div>
+
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>我的课程列表</h3>
+                    <div id="teacher-courses" class="list"></div>
+                </div>
+
+                <!-- 课程详情与资料管理区域 -->
+                <section id="course-manage-section" class="card hidden" style="border-left: 5px solid var(--accent);">
+                    <div class="flex-between">
+                        <h3>当前管理课程：<span id="manage-title"></span></h3>
+                        <div class="flex">
+                            <button class="mini secondary" id="btn-edit-course">✏️ 编辑信息</button>
+                            <button class="mini" style="background: #b23c3c; color: white;" id="btn-delete-course">🗑️ 删除课程</button>
+                        </div>
+                    </div>
+
+                    <!-- 轮播图设置区域 (管理模式) -->
+                    <div class="highlight" style="margin-top: 15px; display: flex; align-items: center; gap: 20px;">
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 10px 0;">🖼️ 首页轮播图设置</h4>
+                            <div class="flex">
+                                <input type="file" id="banner-upload" accept="image/*" style="margin-bottom: 0;" />
+                                <button class="mini" id="btn-save-banner">保存图片</button>
+                                <button class="mini secondary" id="btn-remove-banner" style="display:none;">移除图片</button>
+                            </div>
+                        </div>
+                        <div style="width: 200px; height: 120px; background: #eee; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px dashed #ccc;">
+                            <img id="current-banner-img" src="" alt="暂无图片" style="max-width: 100%; max-height: 100%; display: none;" />
+                            <span id="no-banner-text" class="muted" style="font-size: 12px;">暂无图片</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2" style="margin-top:15px;">
+                        <div>
+                            <h4>基本信息</h4>
+                            <p id="manage-info" class="muted"></p>
+                            <p id="manage-summary" style="background: rgba(0,0,0,0.03); padding: 10px; border-radius: 8px;"></p>
+                        </div>
+                        <div>
+                            <h4>课件资料</h4>
+                            <div class="flex" style="margin-bottom: 10px;">
+                                <input type="file" id="file-upload" />
+                                <button class="mini" id="btn-upload">上传资料</button>
+                            </div>
+                            <div id="material-list" class="list scroll" style="height: 150px;"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 模块 2: 新建课程 -->
+            <div id="module-create" class="module-view">
+                <div class="module-header">
+                    <h2>新建课程</h2>
+                    <p class="subtitle">创建新的教学班级，系统将自动检测排课冲突。</p>
+                </div>
+                <div class="card" style="max-width: 800px; margin: 0 auto;">
+                    <div id="draft-msg" class="pill status-warn hidden" style="margin-bottom: 10px;">
+                        已恢复上次未发布的草稿内容
+                    </div>
+                    <form id="course-form" class="list">
+                        <div class="grid grid-2">
+                            <input name="name" placeholder="课程名称" required />
+                            <input name="code" placeholder="课程代码" />
+                        </div>
+                        <div class="grid grid-2">
+                            <input name="department" placeholder="院系" />
+                            <input name="credits" type="number" placeholder="学分" />
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <select name="time-day" id="teacher-course-time-day" required>
+                                <option value="">选择星期</option>
+                                <option value="1">周一</option>
+                                <option value="2">周二</option>
+                                <option value="3">周三</option>
+                                <option value="4">周四</option>
+                                <option value="5">周五</option>
+                            </select>
+                            <select name="time-period" id="teacher-course-time-period" required>
+                                <option value="">选择节次</option>
+                                <option value="1">上午第1节</option>
+                                <option value="2">上午第2节</option>
+                                <option value="3">下午第1节</option>
+                                <option value="4">下午第2节</option>
+                                <option value="5">晚上</option>
+                            </select>
+                        </div>
+                        <input name="location" id="teacher-course-location" placeholder="上课地点（如：A402）" required />
+
+                        <div class="list-item" style="background: transparent; padding-left: 0;">
+                            <label class="muted" style="font-size: 12px; display: block; margin-bottom: 5px;">设置首页轮播图 (可选)</label>
+                            <input type="file" id="create-banner-input" accept="image/*" />
+                        </div>
+
+                        <div id="teacher-schedule-conflict-warning" style="display: none; padding: 0.5rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin: 0.5rem 0; color: #856404;"></div>
+                        <textarea name="summary" placeholder="课程简介" rows="4"></textarea>
+
+                        <div class="flex" style="margin-top: 10px; gap: 15px;">
+                            <button type="button" id="btn-preview" class="secondary" style="flex:1">预览</button>
+                            <button type="submit" style="flex:1">创建课程</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 模块 3: 我的课表 -->
+            <div id="module-schedule" class="module-view">
+                <div class="module-header">
+                    <h2>我的周课表</h2>
+                    <p class="subtitle">查看本学期的教学安排。</p>
+                </div>
+                <div class="card">
+                    <div id="teacher-schedule-view" style="overflow-x: auto;"></div>
+                </div>
+            </div>
+
+            <!-- 模块 4: 任务管理 -->
+            <div id="module-tasks" class="module-view">
+                <div class="module-header">
+                    <h2>任务管理</h2>
+                    <p class="subtitle">发布作业或考试，设置截止时间和权重。</p>
+                </div>
+                <div class="grid grid-2">
+                    <div class="card">
+                        <h3>发布新任务</h3>
+                        <div class="list-item" style="margin-bottom: 10px; background: transparent; padding: 0;">
+                            <label class="muted" style="font-size: 12px;">选择目标课程：</label>
+                            <select id="task-course"></select>
+                        </div>
+                        <form id="task-form" class="list">
+                            <input name="title" placeholder="任务标题" required />
+                            <select name="type">
+                                <option value="assignment">作业</option>
+                                <option value="exam">考试</option>
+                            </select>
+                            <input name="due" type="date" required />
+                            <input name="weight" type="number" step="0.05" min="0" max="1" placeholder="权重 (如 0.2)" required />
+                            <textarea name="description" placeholder="任务描述"></textarea>
+                            <button type="submit">添加任务</button>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h3>已发布任务列表</h3>
+                        <div id="task-list" class="list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模块 5: 成绩与批改 -->
+            <div id="module-grades" class="module-view">
+                <div class="module-header">
+                    <h2>成绩与批改</h2>
+                    <p class="subtitle">录入分数，系统自动计算加权总评。</p>
+                </div>
+                <div class="card">
+                    <div class="flex-between" style="margin-bottom: 15px;">
+                        <div>
+                            <label class="muted" style="font-size: 12px;">当前批改课程：</label>
+                            <select id="grade-course" style="max-width: 300px;"></select>
+                        </div>
+                    </div>
+
+                    <div class="flex" style="margin-bottom: 15px; flex-wrap: wrap; gap: 10px; align-items: center;">
+                        <button class="mini secondary" id="btn-download-template">📥 下载模版</button>
+                        <input type="file" id="excel-import-input" accept=".xlsx, .xls" class="hidden" />
+                        <button class="mini" id="btn-trigger-import">📤 导入成绩</button>
+                        <span class="muted" style="font-size: 12px;" id="import-status"></span>
+                    </div>
+
+                    <div class="scroll" style="max-height: 600px;">
+                        <table style="width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0;">
+                            <colgroup>
+                                <col style="width: 20%;">
+                                <col style="width: 60%;">
+                                <col style="width: 20%;">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>学生信息</th>
+                                    <th>任务考核详情 (权重)</th>
+                                    <th>期末总评 (自动计算)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="grade-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- 模态框部分 -->
+    <div id="preview-modal" class="modal-overlay hidden">
+        <div class="modal card">
+            <h3>课程创建预览</h3>
+            <div id="preview-content" class="list-item"></div>
+            <div class="flex" style="margin-top: 20px; gap: 15px;">
+                <button class="secondary" onclick="document.getElementById('preview-modal').classList.add('hidden')" style="flex:1">关闭</button>
+                <button id="btn-confirm-create" style="flex:1">确认创建</button>
+            </div>
+        </div>
+    </div>
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="modal card">
+            <h3>编辑课程信息</h3>
+            <form id="edit-form" class="list">
+                <input type="hidden" name="id">
+                <label class="muted">课程名称</label>
+                <input name="name" required />
+                <label class="muted">上课地点</label>
+                <input name="location" required />
+                <label class="muted">课程简介</label>
+                <textarea name="summary"></textarea>
+
+                <!-- 修改点：按钮等宽设置 -->
+                <div class="flex" style="margin-top: 10px; gap: 15px;">
+                    <button type="button" class="secondary" onclick="document.getElementById('edit-modal').classList.add('hidden')" style="flex:1">取消</button>
+                    <button type="submit" style="flex:1">保存修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="grading-modal" class="modal-overlay hidden">
+      <div class="modal card" style="max-width: 600px;">
           <div class="flex-between">
-            <div>
-              <h3>任务管理</h3>
-              <p class="subtitle">为所选课程添加作业或考试。</p>
+            <h3>作业/考试批阅</h3>
+            <button class="mini secondary" onclick="document.getElementById('grading-modal').classList.add('hidden')">✕</button>
+          </div>
+          <div style="margin: 15px 0;">
+            <div class="flex-between muted" style="font-size: 0.9em; margin-bottom: 10px;">
+              <span id="grade-student-name">学生：-</span>
+              <span id="grade-task-title">任务：-</span>
             </div>
-            <select id="task-course"></select>
-          </div>
-          <form id="task-form" class="list">
-            <input name="title" placeholder="任务标题" required />
-            <select name="type">
-              <option value="assignment">作业</option>
-              <option value="exam">考试</option>
-            </select>
-            <input name="due" type="date" required />
-            <input name="weight" type="number" step="0.05" min="0" max="1" placeholder="权重 0-1" />
-            <textarea name="description" placeholder="任务描述"></textarea>
-            <button type="submit">添加任务</button>
-          </form>
-          <div id="task-list" class="list"></div>
-        </div>
-        <div class="card">
-          <div class="flex-between">
-            <div>
-              <h3>成绩录入与发布</h3>
-              <p class="subtitle">选择课程查看选课名单并录入成绩，支持即时发布。</p>
+            <div class="highlight" style="background: #fdfaf3; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <h4 style="margin:0 0 10px 0; font-size:14px; color:var(--accent);">📄 学生提交内容 / 答卷：</h4>
+              <div id="grade-submission-content" style="font-size: 14px; line-height: 1.6; color: #333; min-height: 80px;"></div>
+              <div style="margin-top:10px; font-size:12px; color:var(--muted); text-align:right;">
+                提交时间：<span id="grade-submit-time"></span>
+              </div>
             </div>
-            <select id="grade-course"></select>
+            <div class="list-item" style="background: #fff; border: 1px solid var(--accent); display:flex; align-items:center; justify-content:space-between;">
+              <label style="font-weight:bold;">评分 (0-100)：</label>
+              <div class="flex">
+                <input type="number" id="grade-score-input" min="0" max="100" style="width: 80px; font-size: 16px; font-weight:bold; text-align:center;">
+                <button id="btn-confirm-grade">确认评分</button>
+              </div>
+            </div>
           </div>
-          <div class="scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>学生</th>
-                  <th>任务</th>
-                  <th>当前分</th>
-                  <th>录入分</th>
-                  <th>发布期末成绩</th>
-                </tr>
-              </thead>
-              <tbody id="grade-rows"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <div class="footer">发布前可修改任务，已发布成绩会同步到学生端。</div>
+      </div>
+    </div>
 
     <script type="module" src="js/teacher.js"></script>
   </body>

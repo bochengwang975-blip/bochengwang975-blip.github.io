@@ -34,6 +34,7 @@
           <div class="tab" data-tab="courses">课程管理</div>
           <div class="tab" data-tab="teachers">教师管理</div>
           <div class="tab" data-tab="relations">关系映射</div>
+          <div class="tab" data-tab="grades">成绩审核</div>
         </div>
       </section>
 
@@ -141,6 +142,7 @@
               </div>
               <input name="location" id="course-location" placeholder="上课地点（如：A402）" required />
               <div id="schedule-conflict-warning" style="display: none; padding: 0.5rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin: 0.5rem 0; color: #856404;"></div>
+              <input name="historicalAverage" id="course-historical-average" type="number" placeholder="往年平均分（可选，用于成绩异常检测）" min="0" max="100" step="0.1" />
               <textarea name="summary" id="course-summary" placeholder="课程简介" rows="3"></textarea>
               <div>
                 <label style="display: block; margin-bottom: 0.5rem;"><strong>授课教师（可多选）：</strong></label>
@@ -221,6 +223,51 @@
               <option value="">选择课程</option>
             </select>
             <div id="course-students-list" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 成绩审核 -->
+      <section id="grades-panel" class="tab-panel hidden">
+        <div class="card">
+          <h3>课程成绩审核列表</h3>
+          <p class="subtitle">查看所有课程的成绩分布情况，审核并发布成绩</p>
+          <div style="margin-bottom: 1rem;">
+            <input type="text" id="grade-course-search" placeholder="搜索课程（名称/代码）" style="width: 100%;" />
+          </div>
+          <div id="grade-course-list" class="list"></div>
+        </div>
+        <div id="grade-detail-panel" class="card" style="margin-top: 2rem; display: none;">
+          <h3 id="grade-detail-title">课程成绩详情</h3>
+          <div style="margin-bottom: 1rem; padding: 1rem; background: #f0f8ff; border: 1px solid #4a90e2; border-radius: 4px;">
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 0.5rem;">
+                <strong>设置往年平均分：</strong>
+                <input type="number" id="set-historical-average" placeholder="输入往年平均分" min="0" max="100" step="0.1" style="width: 120px;" />
+                <button class="mini" id="save-historical-average-btn">保存</button>
+              </label>
+              <span class="muted" style="font-size: 0.9em;">（用于检测平均分异常，差异超过20%将标记为异常）</span>
+            </div>
+          </div>
+          <div id="grade-statistics" style="margin-bottom: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 4px;"></div>
+          <div class="scroll" style="max-height: 500px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f5f5f5;">
+                  <th style="border: 1px solid #ddd; padding: 0.5rem;">学号</th>
+                  <th style="border: 1px solid #ddd; padding: 0.5rem;">姓名</th>
+                  <th style="border: 1px solid #ddd; padding: 0.5rem;">班级</th>
+                  <th style="border: 1px solid #ddd; padding: 0.5rem;">最终成绩</th>
+                  <th style="border: 1px solid #ddd; padding: 0.5rem;">状态</th>
+                  <th style="border: 1px solid #ddd; padding: 0.5rem;">操作</th>
+                </tr>
+              </thead>
+              <tbody id="grade-detail-table"></tbody>
+            </table>
+          </div>
+          <div style="margin-top: 1rem;">
+            <button id="grade-approve-all-btn" class="secondary">批量审核通过</button>
+            <button id="grade-close-detail-btn" class="secondary" style="margin-left: 0.5rem;">关闭详情</button>
           </div>
         </div>
       </section>

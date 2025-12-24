@@ -101,15 +101,26 @@ const renderAvailableCourses = async keyword => {
 
 const renderGrades = () => {
   const data = getData();
-  const enrollments = data.enrollments.filter(e => e.studentId === currentUser.id);
+  // 只显示已发布的成绩
+  const enrollments = data.enrollments.filter(e => 
+    e.studentId === currentUser.id && 
+    e.published === true && 
+    e.finalGrade !== null && 
+    e.finalGrade !== undefined
+  );
   gradeTable.innerHTML = "";
+  if (enrollments.length === 0) {
+    gradeTable.innerHTML = "<tr><td colspan='4' style='text-align: center; padding: 1rem;' class='muted'>暂无已发布的成绩</td></tr>";
+    return;
+  }
   enrollments.forEach(e => {
     const course = data.courses.find(c => c.id === e.courseId);
+    if (!course) return;
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${course.name}</td>
-      <td>${e.finalGrade ?? "-"}</td>
-      <td>${e.published ? "已发布" : "待发布"}</td>
+      <td>${e.finalGrade}</td>
+      <td>已发布</td>
       <td class="muted">${e.comments || ""}</td>
     `;
     gradeTable.appendChild(tr);
@@ -171,7 +182,10 @@ const renderDetail = courseId => {
       const enroll = data.enrollments.find(e => e.courseId === courseId && e.studentId === currentUser.id);
       enroll.tasks = enroll.tasks.map(t => (t.taskId === taskId ? { ...t, status: "已提交" } : t));
       saveData(data);
-      addLog(currentUser.id, "提交任务", `课程 ${course.name} 任务 ${taskId} 标记已提交`);
+      // 获取任务名称
+      const task = course.tasks.find(t => t.id === taskId);
+      const taskName = task ? task.title : taskId;
+      addLog(currentUser.id, "提交任务", `课程 ${course.name} 任务 ${taskName} 标记已提交`);
       renderDetail(courseId);
       renderMyCourses();
     })
@@ -180,11 +194,22 @@ const renderDetail = courseId => {
 
 const exportGrades = () => {
   const data = getData();
-  const enrollments = data.enrollments.filter(e => e.studentId === currentUser.id);
+  // 只导出已发布的成绩
+  const enrollments = data.enrollments.filter(e => 
+    e.studentId === currentUser.id && 
+    e.published === true && 
+    e.finalGrade !== null && 
+    e.finalGrade !== undefined
+  );
+  if (enrollments.length === 0) {
+    alert("暂无已发布的成绩可导出");
+    return;
+  }
   const lines = [["课程", "成绩", "状态", "备注"]];
   enrollments.forEach(e => {
     const course = data.courses.find(c => c.id === e.courseId);
-    lines.push([course.name, e.finalGrade ?? "-", e.published ? "已发布" : "待发布", e.comments || ""]);
+    if (!course) return;
+    lines.push([course.name, e.finalGrade, "已发布", e.comments || ""]);
   });
   const csv = lines.map(l => l.join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
